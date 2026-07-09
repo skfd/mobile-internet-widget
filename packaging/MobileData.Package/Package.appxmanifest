@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+         xmlns:mp="http://schemas.microsoft.com/appx/2014/phone/manifest"
+         xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+         xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3"
+         xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10"
+         xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
+         xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+         IgnorableNamespaces="uap uap3 mp rescap com desktop">
+
+  <Identity Name="MobileDataWidget" Publisher="CN=TestCert" Version="1.0.2.0" />
+
+  <mp:PhoneIdentity PhoneProductId="63025828-B62F-4FE9-AAF5-A83E7162E090" PhonePublisherId="00000000-0000-0000-0000-000000000000" />
+
+  <Properties>
+    <DisplayName>Mobile Data Widget</DisplayName>
+    <PublisherDisplayName>TestPublisher</PublisherDisplayName>
+    <Logo>Images\StoreLogo.png</Logo>
+  </Properties>
+
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.22621.0" MaxVersionTested="10.0.26100.0" />
+  </Dependencies>
+
+  <Resources>
+    <Resource Language="x-generate" />
+  </Resources>
+
+  <Applications>
+    <Application Id="App" Executable="$targetnametoken$.exe" EntryPoint="$targetentrypoint$">
+      <uap:VisualElements DisplayName="Mobile Data Widget"
+                          Description="Shows remaining mobile data for Rogers and Fido"
+                          BackgroundColor="transparent"
+                          Square150x150Logo="Images\Square150x150Logo.png"
+                          Square44x44Logo="Images\Square44x44Logo.png">
+        <uap:DefaultTile Wide310x150Logo="Images\Wide310x150Logo.png" />
+      </uap:VisualElements>
+
+      <Extensions>
+        <!-- COM Registration -->
+        <com:Extension Category="windows.comServer">
+          <com:ComServer>
+            <com:ExeServer Executable="MobileData.App\MobileData.App.exe" DisplayName="Mobile Data Widget Provider" Arguments="-Embedding">
+              <com:Class Id="63025828-B62F-4FE9-AAF5-A83E7162E090" DisplayName="Widget Provider" />
+            </com:ExeServer>
+          </com:ComServer>
+        </com:Extension>
+
+        <!-- Widget Registration -->
+        <uap3:Extension Category="windows.appExtension">
+          <uap3:AppExtension Name="com.microsoft.windows.widgets" DisplayName="Mobile Data Widget v2" Id="WidgetProvider" PublicFolder="Public">
+            <uap3:Properties>
+              <WidgetProvider>
+                <ProviderIcons>
+                  <Icon Path="Images\StoreLogo.png" />
+                </ProviderIcons>
+                <Activation>
+                  <CreateInstance ClassId="63025828-B62F-4FE9-AAF5-A83E7162E090" />
+                </Activation>
+                <Definitions>
+                  <Definition Id="Rogers_Data_Widget" DisplayName="Rogers Data" Description="Remaining mobile data on your Rogers plan">
+                    <Capabilities>
+                      <Capability><Size Name="small" /></Capability>
+                      <Capability><Size Name="medium" /></Capability>
+                      <Capability><Size Name="large" /></Capability>
+                    </Capabilities>
+                    <ThemeResources>
+                      <Icons>
+                        <Icon Path="Images\IconRogers.png" />
+                      </Icons>
+                      <Screenshots>
+                        <Screenshot Path="Images\PreviewRogers.png" DisplayAltText="Rogers Data Widget" />
+                      </Screenshots>
+                    </ThemeResources>
+                  </Definition>
+                  <Definition Id="Fido_Data_Widget" DisplayName="Fido Data" Description="Remaining mobile data on your Fido plan">
+                    <Capabilities>
+                      <Capability><Size Name="small" /></Capability>
+                      <Capability><Size Name="medium" /></Capability>
+                      <Capability><Size Name="large" /></Capability>
+                    </Capabilities>
+                    <ThemeResources>
+                      <Icons>
+                        <Icon Path="Images\IconFido.png" />
+                      </Icons>
+                      <Screenshots>
+                        <Screenshot Path="Images\PreviewFido.png" DisplayAltText="Fido Data Widget" />
+                      </Screenshots>
+                    </ThemeResources>
+                  </Definition>
+                </Definitions>
+              </WidgetProvider>
+            </uap3:Properties>
+          </uap3:AppExtension>
+        </uap3:Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+
+  <Capabilities>
+    <Capability Name="internetClient" />
+    <rescap:Capability Name="runFullTrust" />
+  </Capabilities>
+</Package>
