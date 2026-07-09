@@ -1,0 +1,128 @@
+{
+    "type": "AdaptiveCard",
+    "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+    "version": "1.5",
+    "body": [
+        {
+            "type": "ColumnSet",
+            "columns": [
+                {
+                    "type": "Column",
+                    "width": "stretch",
+                    "items": [
+                        {
+                            "type": "TextBlock",
+                            "text": "${providerName} Data",
+                            "weight": "bolder",
+                            "size": "medium",
+                            "wrap": true
+                        }
+                    ],
+                    "verticalContentAlignment": "center"
+                },
+                {
+                    "type": "Column",
+                    "width": "auto",
+                    "items": [
+                        {
+                            "type": "TextBlock",
+                            "text": "${remainingText}",
+                            "weight": "bolder",
+                            "size": "medium",
+                            "color": "${statusColor}",
+                            "horizontalAlignment": "right"
+                        }
+                    ],
+                    "verticalContentAlignment": "center"
+                }
+            ]
+        },
+        {
+            "type": "TextBlock",
+            "text": "${usedText}",
+            "size": "small",
+            "spacing": "small",
+            "wrap": true
+        },
+        {
+            "type": "TextBlock",
+            "text": "${resetTime}",
+            "size": "small",
+            "weight": "lighter",
+            "isSubtle": true,
+            "spacing": "none"
+        },
+        {
+            "type": "TextBlock",
+            "text": "${connection}",
+            "$when": "${connection != ''}",
+            "size": "small",
+            "weight": "lighter",
+            "isSubtle": true,
+            "spacing": "none"
+        },
+        {
+            "type": "ColumnSet",
+            "spacing": "small",
+            "columns": [
+                {
+                    "type": "Column",
+                    "width": "stretch",
+                    "items": [
+                        {
+                            "type": "ColumnSet",
+                            "$when": "${barStyle == 'accent'}",
+                            "spacing": "none",
+                            "columns": [
+                                { "type": "Column", "width": "${percentValueClamped}", "items": [], "minHeight": "4px", "style": "accent" },
+                                { "type": "Column", "width": "${percentRemaining}", "items": [], "minHeight": "4px", "style": "emphasis" }
+                            ]
+                        },
+                        {
+                            "type": "ColumnSet",
+                            "$when": "${barStyle == 'warning'}",
+                            "spacing": "none",
+                            "columns": [
+                                { "type": "Column", "width": "${percentValueClamped}", "items": [], "minHeight": "4px", "style": "warning" },
+                                { "type": "Column", "width": "${percentRemaining}", "items": [], "minHeight": "4px", "style": "emphasis" }
+                            ]
+                        },
+                        {
+                            "type": "ColumnSet",
+                            "$when": "${barStyle == 'attention'}",
+                            "spacing": "none",
+                            "columns": [
+                                { "type": "Column", "width": "${percentValueClamped}", "items": [], "minHeight": "4px", "style": "attention" },
+                                { "type": "Column", "width": "${percentRemaining}", "items": [], "minHeight": "4px", "style": "emphasis" }
+                            ]
+                        }
+                    ],
+                    "verticalContentAlignment": "center"
+                },
+                {
+                    "type": "Column",
+                    "width": "auto",
+                    "items": [
+                        {
+                            "type": "TextBlock",
+                            "text": "${percentText} used",
+                            "size": "small",
+                            "weight": "lighter",
+                            "color": "${statusColor}"
+                        }
+                    ],
+                    "verticalContentAlignment": "center"
+                }
+            ]
+        },
+        {
+            "type": "TextBlock",
+            "text": "${statusMessage}",
+            "$when": "${statusMessage != ''}",
+            "size": "small",
+            "color": "warning",
+            "wrap": true,
+            "spacing": "small"
+        }
+    ]
+}

@@ -1,0 +1,77 @@
+{
+    "type": "AdaptiveCard",
+    "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+    "version": "1.5",
+    "body": [
+        {
+            "type": "TextBlock",
+            "text": "${providerName}",
+            "size": "small",
+            "weight": "lighter",
+            "isSubtle": true,
+            "spacing": "none"
+        },
+        {
+            "type": "TextBlock",
+            "text": "${remainingText}",
+            "weight": "bolder",
+            "size": "large",
+            "color": "${statusColor}",
+            "spacing": "none"
+        },
+        {
+            "type": "ColumnSet",
+            "spacing": "small",
+            "columns": [
+                {
+                    "type": "Column",
+                    "width": "stretch",
+                    "items": [
+                        {
+                            "type": "ColumnSet",
+                            "$when": "${barStyle == 'accent'}",
+                            "spacing": "none",
+                            "columns": [
+                                { "type": "Column", "width": "${percentValueClamped}", "items": [], "minHeight": "4px", "style": "accent" },
+                                { "type": "Column", "width": "${percentRemaining}", "items": [], "minHeight": "4px", "style": "emphasis" }
+                            ]
+                        },
+                        {
+                            "type": "ColumnSet",
+                            "$when": "${barStyle == 'warning'}",
+                            "spacing": "none",
+                            "columns": [
+                                { "type": "Column", "width": "${percentValueClamped}", "items": [], "minHeight": "4px", "style": "warning" },
+                                { "type": "Column", "width": "${percentRemaining}", "items": [], "minHeight": "4px", "style": "emphasis" }
+                            ]
+                        },
+                        {
+                            "type": "ColumnSet",
+                            "$when": "${barStyle == 'attention'}",
+                            "spacing": "none",
+                            "columns": [
+                                { "type": "Column", "width": "${percentValueClamped}", "items": [], "minHeight": "4px", "style": "attention" },
+                                { "type": "Column", "width": "${percentRemaining}", "items": [], "minHeight": "4px", "style": "emphasis" }
+                            ]
+                        }
+                    ],
+                    "verticalContentAlignment": "center"
+                },
+                {
+                    "type": "Column",
+                    "width": "auto",
+                    "items": [
+                        {
+                            "type": "TextBlock",
+                            "text": "${percentText}",
+                            "size": "small",
+                            "weight": "lighter",
+                            "color": "${statusColor}"
+                        }
+                    ],
+                    "verticalContentAlignment": "center"
+                }
+            ]
+        }
+    ]
+}
