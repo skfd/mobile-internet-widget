@@ -1,0 +1,69 @@
+# Claude Code project data
+.claude/
+
+# Credential and secret files
+**/auth.json
+**/credentials.json
+**/.credentials.json
+**/secrets.json
+*.key
+*.pem
+*.pfx
+secrets/
+
+# Local browser profile / scraped cache (may contain session cookies)
+.mobile-widget/
+
+# Visual Studio / MSBuild
+.vs/
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# MSIX Packaging
+AppPackages/
+BundleArtifacts/
+Package.StoreAssociation.xml
+*.appx
+*.appxbundle
+*.appxupload
+*.msix
+*.msixbundle
+
+# NuGet
+*.nupkg
+*.snupkg
+**/packages/*
+project.lock.json
+artifacts/
+
+# Playwright
+**/.playwright/
+
+# VS Code / Rider
+.vscode/
+*.code-workspace
+.idea/
+*.sln.iml
+
+# Temp
+*.tmp
+*.temp
+*.log
+*.stackdump
+Thumbs.db
+Desktop.ini

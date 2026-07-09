@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/MobileData.App/MobileData.App.csproj" />
+    <Project Path="src/MobileData.Collector/MobileData.Collector.csproj" />
+    <Project Path="src/MobileData.Core/MobileData.Core.csproj" />
+    <Project Path="src/MobileData.Providers/MobileData.Providers.csproj" />
+  </Folder>
+</Solution>
