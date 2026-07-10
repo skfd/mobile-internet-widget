@@ -47,9 +47,12 @@ if ($LASTEXITCODE -ne 0) {
     & $signtool.FullName sign /fd SHA256 /sha1 $cert.Thumbprint $Msix
     if ($LASTEXITCODE -ne 0) { throw "signtool sign failed" }
 }
-& $signtool.FullName verify /pa $Msix | Out-Null
+# Note: `verify /pa` reports an untrusted root for a self-signed cert until the
+# .cer is imported (which Install.ps1 does on the target machine) — informational.
+& $signtool.FullName verify /pa $Msix 2>&1 | Select-Object -Last 1 | Write-Host
 
 # Export the public cert next to the package for the installer to trust.
 $cerPath = [IO.Path]::ChangeExtension($Msix, ".cer")
 Export-Certificate -Cert $cert -FilePath $cerPath | Out-Null
 Write-Host "Signed. Certificate: $cerPath" -ForegroundColor Cyan
+exit 0
