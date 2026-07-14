@@ -8,8 +8,9 @@ namespace MobileData.Providers;
 /// </summary>
 public abstract class CacheFileProvider : IDataProvider, IDisposable
 {
-    /// <summary>Cached data is considered stale once older than this.</summary>
-    private static readonly TimeSpan StaleAfter = TimeSpan.FromHours(6);
+    /// <summary>Cached data is considered stale once older than this. Kept short
+    /// so an expired collector session surfaces the Reconnect prompt quickly.</summary>
+    private static readonly TimeSpan StaleAfter = TimeSpan.FromHours(2);
 
     private readonly FileSystemWatcher? _watcher;
 
@@ -66,7 +67,7 @@ public abstract class CacheFileProvider : IDataProvider, IDisposable
         {
             var days = (int)age.TotalDays;
             var ageText = days > 0 ? $"{days}d {age.Hours}h" : $"{age.Hours}h";
-            message = $"Data is {ageText} old — re-run the collector.";
+            message = $"Data is {ageText} old. Tap Reconnect to sign in again.";
         }
 
         return Task.FromResult(new DataUsageSnapshot(

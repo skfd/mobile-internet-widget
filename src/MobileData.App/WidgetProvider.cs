@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
+using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Microsoft.Windows.Widgets;
@@ -63,6 +66,67 @@ public sealed class WidgetProvider : IWidgetProvider, IWidgetProvider2
 
     public void OnActionInvoked(WidgetActionInvokedArgs actionInvokedArgs)
     {
+        try
+        {
+            if (!string.Equals(actionInvokedArgs.Verb, "reconnect", StringComparison.OrdinalIgnoreCase))
+                return;
+
+            // The carrier session behind the collector expired. Open the login
+            // page in the dedicated "attach" Chrome profile so the user signs in
+            // there; the next collector run reuses that session to refresh.
+            var definitionId = _activeWidgets.TryGetValue(actionInvokedArgs.WidgetContext.Id, out var state)
+                ? state.DefinitionId
+                : actionInvokedArgs.WidgetContext.DefinitionId;
+            LaunchLogin(LoginUrlFor(definitionId));
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"OnActionInvoked failed: {ex.Message}");
+        }
+    }
+
+    private static string LoginUrlFor(string definitionId) => definitionId switch
+    {
+        RogersWidgetId => "https://www.rogers.com/consumer/profile/usage",
+        _ => "https://www.fido.ca/self-serve/wireless"
+    };
+
+    /// <summary>
+    /// Launch the carrier login in the collector's attach Chrome profile (port
+    /// 9222). If that Chrome is already running, this just opens a tab in it.
+    /// </summary>
+    private static void LaunchLogin(string url)
+    {
+        var chrome = FindChrome();
+        if (chrome is null)
+        {
+            System.Diagnostics.Debug.WriteLine("LaunchLogin: chrome.exe not found.");
+            return;
+        }
+
+        var profileDir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+            ".mobile-widget", "chrome-attach");
+
+        var psi = new ProcessStartInfo { FileName = chrome, UseShellExecute = false };
+        psi.ArgumentList.Add("--remote-debugging-port=9222");
+        psi.ArgumentList.Add($"--user-data-dir={profileDir}");
+        psi.ArgumentList.Add(url);
+        Process.Start(psi);
+    }
+
+    private static string? FindChrome()
+    {
+        var candidates = new[]
+        {
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                "Google", "Chrome", "Application", "chrome.exe"),
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
+                "Google", "Chrome", "Application", "chrome.exe"),
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Google", "Chrome", "Application", "chrome.exe"),
+        };
+        return candidates.FirstOrDefault(File.Exists);
     }
 
     public void OnCustomizationRequested(WidgetCustomizationRequestedArgs customizationRequestedArgs)
@@ -223,8 +287,10 @@ public sealed class WidgetProvider : IWidgetProvider, IWidgetProvider2
             }
         }
 
-        // Status / staleness banner (empty when fresh).
+        // Status / staleness banner (empty when fresh). When present, the data is
+        // stale or missing — offer a Reconnect button to re-establish the session.
         var statusMessage = usage.Message ?? "";
+        var needsReconnect = !string.IsNullOrWhiteSpace(statusMessage);
 
         // Current connection (tethering) status.
         var net = NetworkDetector.Detect();
@@ -253,6 +319,7 @@ public sealed class WidgetProvider : IWidgetProvider, IWidgetProvider2
             "statusColor": "{{statusColor}}",
             "resetTime": "{{Escape(resetText)}}",
             "statusMessage": "{{Escape(statusMessage)}}",
+            "needsReconnect": {{(needsReconnect ? "true" : "false")}},
             "connection": "{{Escape(connectionText)}}",
             "size": "{{size}}"
         }

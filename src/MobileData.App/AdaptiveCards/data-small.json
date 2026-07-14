@@ -72,6 +72,14 @@
                     "verticalContentAlignment": "center"
                 }
             ]
+        },
+        {
+            "type": "ActionSet",
+            "$when": "${needsReconnect}",
+            "spacing": "small",
+            "actions": [
+                { "type": "Action.Execute", "verb": "reconnect", "title": "Reconnect" }
+            ]
         }
     ]
 }

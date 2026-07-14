@@ -18,6 +18,7 @@ using MobileData.Core;
 //   MobileData.Collector fido                # fetch usage
 //   MobileData.Collector fido --set-login    # store DPAPI-encrypted credentials
 //   MobileData.Collector fido --headless     # run without a visible window (needs a live session)
+//   MobileData.Collector fido --attach        # scrape via your own Chrome (CDP on :9222) to pass login reCAPTCHA
 //
 // NOTE: portal URLs and text patterns are tuned for Fido; if extraction fails
 // the page text is dumped to the debug folder so patterns can be adjusted.
@@ -25,7 +26,7 @@ using MobileData.Core;
 var providerId = (args.FirstOrDefault() ?? "").Trim().ToLowerInvariant();
 if (providerId is not ("rogers" or "fido"))
 {
-    Console.Error.WriteLine("Usage: MobileData.Collector <rogers|fido> [--set-login] [--headless]");
+    Console.Error.WriteLine("Usage: MobileData.Collector <rogers|fido> [--set-login] [--headless] [--attach]");
     return 1;
 }
 
@@ -48,20 +49,55 @@ if (args.Contains("--set-login"))
 }
 
 var headless = args.Contains("--headless");
+var attach = args.Contains("--attach");
 var creds = CredentialStore.Load(providerId);
 
-var profileDir = Path.Combine(UsageCache.Directory, "browser", providerId);
-Directory.CreateDirectory(profileDir);
-
+// Disposing the Playwright driver tears down whatever we started: it closes a
+// browser we launched, and merely disconnects from one we attached to over CDP.
 using var playwright = await Playwright.CreateAsync();
-await using var browser = await playwright.Chromium.LaunchPersistentContextAsync(profileDir, new()
-{
-    Headless = headless,
-    Channel = "chrome",
-    ViewportSize = new() { Width = 1280, Height = 900 }
-});
 
-var page = browser.Pages.FirstOrDefault() ?? await browser.NewPageAsync();
+IPage page;
+IPage? attachPage = null;  // the throwaway tab we open in the user's Chrome; closed when done
+if (attach)
+{
+    // Reuse a session from the user's own Chrome, where the carrier's login
+    // reCAPTCHA trusts the browser. Launch Chrome once with, e.g.:
+    //   chrome.exe --remote-debugging-port=9222 --user-data-dir=%USERPROFILE%\.mobile-widget\chrome-attach
+    // sign into the carrier there, then run the collector with --attach.
+    // 127.0.0.1, not "localhost": Chrome's DevTools endpoint binds IPv4 only,
+    // and "localhost" can resolve to IPv6 (::1) and be refused.
+    const string endpoint = "http://127.0.0.1:9222";
+    IBrowser attached;
+    try
+    {
+        attached = await playwright.Chromium.ConnectOverCDPAsync(endpoint);
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine($"Could not connect to Chrome at {endpoint}.");
+        Console.Error.WriteLine("Start Chrome with remote debugging first (PowerShell):");
+        Console.Error.WriteLine("  & 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe' " +
+            "--remote-debugging-port=9222 --user-data-dir=\"$env:USERPROFILE\\.mobile-widget\\chrome-attach\"");
+        Console.Error.WriteLine($"then sign into {config.DisplayName}, and re-run with --attach.");
+        Console.Error.WriteLine($"(details: {ex.Message})");
+        return 4;
+    }
+    var context = attached.Contexts.FirstOrDefault() ?? await attached.NewContextAsync();
+    // Use a fresh tab so we don't hijack whatever the user has open.
+    page = attachPage = await context.NewPageAsync();
+}
+else
+{
+    var profileDir = Path.Combine(UsageCache.Directory, "browser", providerId);
+    Directory.CreateDirectory(profileDir);
+    var browser = await playwright.Chromium.LaunchPersistentContextAsync(profileDir, new()
+    {
+        Headless = headless,
+        Channel = "chrome",
+        ViewportSize = new() { Width = 1280, Height = 900 }
+    });
+    page = browser.Pages.FirstOrDefault() ?? await browser.NewPageAsync();
+}
 
 Console.WriteLine($"Opening {config.DisplayName} usage page...");
 try
@@ -77,7 +113,10 @@ catch (Exception ex)
 var loggedIn = await LoginFlow.WaitForUsageAsync(page, timeoutMs: 8000);
 if (!loggedIn)
 {
-    if (creds is not null)
+    // Auto-login only applies to the automation profile. In --attach mode the
+    // login happens once, by hand, in the user's own Chrome (reCAPTCHA trusts
+    // it there); we never try to drive that form.
+    if (!attach && creds is not null)
     {
         Console.WriteLine("Attempting auto-login...");
         await LoginFlow.TryAutoLoginAsync(page, config, creds);
@@ -86,6 +125,17 @@ if (!loggedIn)
 
     if (!loggedIn)
     {
+        if (attach)
+        {
+            // Never block on a prompt here: --attach is the unattended hourly
+            // path. If the session lapsed, keep the old cache and ask for a
+            // one-time manual sign-in in the debug Chrome.
+            Console.Error.WriteLine(
+                $"Not signed in. The {config.DisplayName} session in the debug Chrome (port 9222) " +
+                "has expired — sign in once in that window; hourly scrapes resume automatically.");
+            if (attachPage is not null) { try { await attachPage.CloseAsync(); } catch { } }
+            return 3;
+        }
         if (headless)
         {
             Console.Error.WriteLine("Not signed in and could not auto-login (a visible run / 2FA may be needed).");
@@ -99,13 +149,34 @@ if (!loggedIn)
     }
 }
 
-var text = await page.InnerTextAsync("body");
+// Collect visible text from the main document AND every child frame — the
+// carrier's self-serve app is often embedded in an iframe, so body text alone
+// can come back blank even when usage is on screen.
+var sections = new List<string>();
+foreach (var frame in page.Frames)
+{
+    try
+    {
+        var frameText = await frame.Locator("body").InnerTextAsync();
+        if (!string.IsNullOrWhiteSpace(frameText))
+            sections.Add($"===== FRAME {frame.Url} =====\n{frameText}");
+    }
+    catch { /* frame detached or cross-origin — skip */ }
+}
+var text = string.Join("\n\n", sections);
 
 // Save a debug dump so patterns can be tuned against the real page.
 var debugDir = Path.Combine(UsageCache.Directory, "debug");
 Directory.CreateDirectory(debugDir);
 var dumpPath = Path.Combine(debugDir, $"{providerId}-{DateTime.Now:yyyyMMdd-HHmmss}.txt");
-await File.WriteAllTextAsync(dumpPath, text);
+await File.WriteAllTextAsync(dumpPath,
+    $"URL: {page.Url}\nFrames: {page.Frames.Count}\n\n{text}");
+
+Console.WriteLine($"Landed on: {page.Url}  ({page.Frames.Count} frame(s), {sections.Count} with text)");
+
+// Done reading the page; close our throwaway tab so attach runs don't pile up
+// tabs in the user's Chrome hour after hour.
+if (attachPage is not null) { try { await attachPage.CloseAsync(); } catch { } }
 
 var parsed = UsageParser.Parse(text);
 if (parsed is null)
@@ -144,7 +215,7 @@ internal sealed record CarrierConfig(string DisplayName, string UsageUrl)
     public static CarrierConfig For(string providerId) => providerId switch
     {
         "rogers" => new("Rogers", "https://www.rogers.com/consumer/profile/usage"),
-        "fido" => new("Fido", "https://www.fido.ca/pages/#/usage"),
+        "fido" => new("Fido", "https://www.fido.ca/self-serve/wireless"),
         _ => throw new ArgumentOutOfRangeException(nameof(providerId))
     };
 }
