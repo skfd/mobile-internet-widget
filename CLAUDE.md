@@ -133,10 +133,27 @@ concatenates. `UsageParser` keys off these labels, all confirmed working:
 
 `NetworkDetector.Detect()` (in Providers, uses `Windows.Networking.Connectivity`)
 reports the active connection: SSID/name, metered, cellular, and a best-effort
-`IsTethered`. A phone hotspot can't tell the PC its carrier, so `IsTethered` is
-inferred from cellular-or-metered. Caveat: Windows does **not** auto-mark a Wi-Fi
-hotspot as metered — either mark it metered in Windows settings, or (planned) map
-the hotspot SSID → carrier in a `~/.mobile-widget/networks.json` config.
+`IsTethered`, inferred from cellular-or-metered-or-known-SSID.
+
+**The carrier cannot be probed.** Verified on a live Fido tether: the PC only ever
+sees the hotspot's `172.20.10.1` gateway, and the egress IP resolves to
+**AS812 "Rogers Communications Canada Inc."** with a `cpe.net.cable.rogers.com` PTR.
+Fido is a Rogers subsidiary on Rogers' network and IP space, so Fido and Rogers are
+*indistinguishable* by ASN, WHOIS, or reverse DNS — there is no signal to find.
+
+So the SSID is the only dependable carrier hint, declared by the user in
+`~/.mobile-widget/networks.json`, mapping hotspot SSID → carrier:
+
+```json
+{ "Jane’s iPhone": "fido" }
+```
+
+A listed SSID counts as tethered. This matters because Windows does **not**
+auto-mark a Wi-Fi hotspot as metered (you can also mark it metered by hand, which
+is what `IsMetered` picks up). Keys are matched ordinally — watch for typographic
+apostrophes in phone-generated SSIDs (`Jane’s iPhone` uses U+2019, not `'`, and the
+two do not match). The mapped carrier value is recorded for the user's reference;
+nothing reads it yet, since the card only reports "Tethered via {SSID}".
 
 ## Known gaps / next steps
 
@@ -144,7 +161,6 @@ the hotspot SSID → carrier in a `~/.mobile-widget/networks.json` config.
   you sign in once in the debug Chrome. There's no way to fully automate this;
   the Reconnect button just shortcuts opening that login. A logon task to
   auto-launch the debug Chrome would keep it warm across reboots (not yet added).
-- SSID → carrier mapping config for reliable tether detection.
 - Rogers portal patterns (not started — Fido only for now). The Rogers widget
   ships with placeholder art and shows "No data" until its collector exists.
 - Package previews (`PreviewFido.png` etc.) are generated placeholders; replace
