@@ -109,8 +109,11 @@ catch (Exception ex)
     Console.WriteLine($"(navigation warning: {ex.Message})");
 }
 
-// Wait for either the usage content or a login form to settle.
-var loggedIn = await LoginFlow.WaitForUsageAsync(page, timeoutMs: 8000);
+// Wait for either the usage content or a login form to settle. Give --attach a
+// longer budget: it often runs against a just-launched Chrome, and the carrier's
+// SPA can take well over 8s to render usage from a cold start — too short a wait
+// looks like "not signed in" and skips a perfectly good session.
+var loggedIn = await LoginFlow.WaitForUsageAsync(page, timeoutMs: attach ? 40000 : 8000);
 if (!loggedIn)
 {
     // Auto-login only applies to the automation profile. In --attach mode the
