@@ -16,11 +16,13 @@ A Windows widget runs as a headless background COM server and **cannot drive a
 browser**. Carriers have no public data-usage API, so usage is obtained by
 browser automation in a *separate* step:
 
-- **Collector** (`MobileData.Collector`): a Playwright console app. You sign in
-  to the carrier portal once in a persistent Chrome profile (handling 2FA), it
-  scrapes remaining/used data, and writes a cache file.
+- **Collector** (`MobileData.Collector`): a Playwright console app that scrapes
+  remaining/used data and writes a cache file. It does **not** log in itself —
+  see "Login: attach to real Chrome" below.
 - **Widget** (`MobileData.App`): reads that cache file and renders the card.
-  It never authenticates or touches the network.
+  It never authenticates or touches the network. When the cache is stale it shows
+  a **Reconnect** button whose `reconnect` verb (`WidgetProvider.OnActionInvoked`)
+  opens the carrier login in the attach Chrome profile.
 
 The cache lives at `%USERPROFILE%\.mobile-widget\{provider}.json`
 (`rogers.json`, `fido.json`). Format is defined by `UsageCacheRecord` in
@@ -66,20 +68,39 @@ stays fast.
 Note: Core and Providers declare `<RuntimeIdentifiers>win-x64</RuntimeIdentifiers>`
 because the self-contained App pushes that RID down through the wapproj build.
 
-## Collector usage
+## Login: attach to real Chrome (the important bit)
+
+Carrier login is gated by an **invisible reCAPTCHA** (Fido → `account.fido.ca`,
+Rogers' Transmit Security IdP). It detects Playwright's automation window and
+blocks sign-in even when a human types the password, so the collector **never
+logs in from automation**. Instead:
+
+- A **dedicated real Chrome** runs with a separate profile and remote debugging:
+  `--user-data-dir=%USERPROFILE%\.mobile-widget\chrome-attach --remote-debugging-port=9222`.
+  You sign into the carrier **once** in that window (reCAPTCHA trusts a real
+  browser). The profile persists the session on disk across reboots.
+- `--attach` mode connects over CDP to that Chrome (`http://127.0.0.1:9222` —
+  IPv4, not `localhost`, which can resolve to `::1` and be refused), opens a
+  throwaway tab, and scrapes. reCAPTCHA only fires at *login*, so an
+  already-authenticated session scrapes freely, unattended, until the session
+  cookie eventually expires (weeks) and you sign in once more.
 
 ```powershell
-dotnet run --project src/MobileData.Collector -- rogers   # or fido
+dotnet run --project src/MobileData.Collector -- fido --attach   # scrape via port 9222
 ```
 
-First run needs Playwright's Chromium/Chrome channel available. A Chrome window
-opens; sign in and reach the usage screen, then press Enter in the console.
+`run-collector-attach.ps1` is the self-healing runner: it ensures the debug
+Chrome is up (launches it minimized if not), then runs `--attach`.
+`install-collector-task.ps1` schedules that wrapper every **20 min** as the
+logged-on user (task `MobileDataWidget-<provider>-Collector`). When the session
+lapses the scrape exits non-zero **without** overwriting the cache, leaving the
+last good number; the widget's Reconnect button re-establishes it.
 
-`install-collector-task.ps1` registers a Windows Scheduled Task
-(`MobileDataWidget-<provider>-Collector`) that runs the collector `--headless`
-hourly as the logged-on user. It reuses the persistent browser session and falls
-back to the DPAPI-stored credentials; requires one successful interactive run
-first to establish the session.
+Notes for future work:
+- `--attach` waits up to 40s for usage to render (a cold-launched Chrome + the
+  carrier SPA is slow); too short a wait looks like "not signed in".
+- The non-attach path (persistent automation profile, `--set-login` DPAPI creds,
+  `--headless`) still exists in code but is dead for Fido — reCAPTCHA blocks it.
 
 ## Critical Architecture Concepts
 
@@ -98,9 +119,10 @@ between the manifest and `WidgetProvider.cs`.
 
 ## Fido specifics (verified against a live account)
 
-The dashboard at `https://www.fido.ca/self-serve/wireless` renders usage as plain
-text (no late XHR to intercept — Playwright body text is enough). `UsageParser`
-keys off these labels, all confirmed working:
+The dashboard is `https://www.fido.ca/self-serve/wireless` (the old
+`/pages/#/usage` now 404s). Usage renders inside an **iframe**, so `body` text
+alone comes back blank — the collector reads text from **all frames** and
+concatenates. `UsageParser` keys off these labels, all confirmed working:
 
 - `38.78GB` + `Remaining data`  → remaining
 - `Total data (plan+added)` `90.00` → total (used = total − remaining)
@@ -118,9 +140,10 @@ the hotspot SSID → carrier in a `~/.mobile-widget/networks.json` config.
 
 ## Known gaps / next steps
 
-- Collector auto-login: currently relies on the persistent Playwright profile
-  (sign in once). Optional: DPAPI-encrypted credential storage for unattended
-  re-login when the session expires.
+- Re-login is manual by necessity (reCAPTCHA): when the attach session expires
+  you sign in once in the debug Chrome. There's no way to fully automate this;
+  the Reconnect button just shortcuts opening that login. A logon task to
+  auto-launch the debug Chrome would keep it warm across reboots (not yet added).
 - SSID → carrier mapping config for reliable tether detection.
 - Rogers portal patterns (not started — Fido only for now). The Rogers widget
   ships with placeholder art and shows "No data" until its collector exists.
