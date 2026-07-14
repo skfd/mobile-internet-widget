@@ -220,7 +220,7 @@ public sealed class WidgetProvider : IWidgetProvider, IWidgetProvider2
             var usage = provider.FetchUsageAsync(CancellationToken.None).GetAwaiter().GetResult();
 
             var templateJson = GetTemplate(state.Size);
-            var dataJson = BuildDataJson(usage, provider.DisplayName, state.Size);
+            var dataJson = BuildDataJson(usage, provider.DisplayName, state.Size, BrandColorFor(state.DefinitionId));
 
             var updateOptions = new WidgetUpdateRequestOptions(widgetId)
             {
@@ -236,13 +236,20 @@ public sealed class WidgetProvider : IWidgetProvider, IWidgetProvider2
         }
     }
 
-    private static string BuildDataJson(DataUsageSnapshot usage, string providerName, WidgetSize size)
+    /// <summary>Carrier brand colors, matching the icons produced by gen-images.ps1.</summary>
+    private static string BrandColorFor(string definitionId) => definitionId switch
+    {
+        RogersWidgetId => "#DA291C",
+        _ => "#E87722"
+    };
+
+    private static string BuildDataJson(DataUsageSnapshot usage, string providerName, WidgetSize size, string brandHex)
     {
         var hasData = usage.FetchedAt != DateTimeOffset.MinValue;
         var util = usage.Utilization;            // 0..1, or null when unlimited/unknown
         var utilPercent = util.HasValue ? util.Value * 100.0 : 0.0;
 
-        var (barStyle, statusColor) = GetStatusVisuals(utilPercent, util.HasValue);
+        var colors = CardColors.For(GetBarStyle(utilPercent, util.HasValue), brandHex);
 
         // Headline "remaining" figure.
         string remainingText;
@@ -315,8 +322,12 @@ public sealed class WidgetProvider : IWidgetProvider, IWidgetProvider2
             "percentText": "{{percentText}}",
             "percentValueClamped": {{percentValueClamped}},
             "percentRemaining": {{percentRemaining}},
-            "barStyle": "{{barStyle}}",
-            "statusColor": "{{statusColor}}",
+            "textColor": "{{colors.Text}}",
+            "statusColor": "{{colors.Status}}",
+            "messageColor": "{{colors.Message}}",
+            "barFill": "{{colors.BarFill}}",
+            "barTrack": "{{colors.BarTrack}}",
+            "background": "{{colors.Background}}",
             "resetTime": "{{Escape(resetText)}}",
             "statusMessage": "{{Escape(statusMessage)}}",
             "needsReconnect": {{(needsReconnect ? "true" : "false")}},
@@ -336,14 +347,14 @@ public sealed class WidgetProvider : IWidgetProvider, IWidgetProvider2
     private static string Escape(string? s) =>
         (s ?? "").Replace("\\", "\\\\").Replace("\"", "\\\"");
 
-    private static (string barStyle, string statusColor) GetStatusVisuals(double utilization, bool hasData)
+    private static string GetBarStyle(double utilization, bool hasData)
     {
-        if (!hasData) return ("emphasis", "default");
+        if (!hasData) return "emphasis";
         return utilization switch
         {
-            > 90 => ("attention", "attention"),
-            > 75 => ("warning", "warning"),
-            _ => ("accent", "accent")
+            > 90 => "attention",
+            > 75 => "warning",
+            _ => "accent"
         };
     }
 

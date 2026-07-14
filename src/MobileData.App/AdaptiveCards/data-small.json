@@ -8,6 +8,7 @@
             "text": "${providerName}",
             "size": "small",
             "weight": "lighter",
+            "color": "${textColor}",
             "isSubtle": true,
             "spacing": "none"
         },
@@ -29,29 +30,10 @@
                     "items": [
                         {
                             "type": "ColumnSet",
-                            "$when": "${barStyle == 'accent'}",
                             "spacing": "none",
                             "columns": [
-                                { "type": "Column", "width": "${percentValueClamped}", "items": [], "minHeight": "4px", "style": "accent" },
-                                { "type": "Column", "width": "${percentRemaining}", "items": [], "minHeight": "4px", "style": "emphasis" }
-                            ]
-                        },
-                        {
-                            "type": "ColumnSet",
-                            "$when": "${barStyle == 'warning'}",
-                            "spacing": "none",
-                            "columns": [
-                                { "type": "Column", "width": "${percentValueClamped}", "items": [], "minHeight": "4px", "style": "warning" },
-                                { "type": "Column", "width": "${percentRemaining}", "items": [], "minHeight": "4px", "style": "emphasis" }
-                            ]
-                        },
-                        {
-                            "type": "ColumnSet",
-                            "$when": "${barStyle == 'attention'}",
-                            "spacing": "none",
-                            "columns": [
-                                { "type": "Column", "width": "${percentValueClamped}", "items": [], "minHeight": "4px", "style": "attention" },
-                                { "type": "Column", "width": "${percentRemaining}", "items": [], "minHeight": "4px", "style": "emphasis" }
+                                { "type": "Column", "width": "${percentValueClamped}", "items": [], "minHeight": "4px", "backgroundImage": { "url": "${barFill}", "fillMode": "repeat" } },
+                                { "type": "Column", "width": "${percentRemaining}", "items": [], "minHeight": "4px", "backgroundImage": { "url": "${barTrack}", "fillMode": "repeat" } }
                             ]
                         }
                     ],
@@ -81,5 +63,9 @@
                 { "type": "Action.Execute", "verb": "reconnect", "title": "Reconnect" }
             ]
         }
-    ]
+    ],
+    "backgroundImage": {
+        "url": "${background}",
+        "fillMode": "repeatVertically"
+    }
 }

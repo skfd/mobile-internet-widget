@@ -15,6 +15,7 @@
                             "text": "${providerName} Data",
                             "weight": "bolder",
                             "size": "large",
+                            "color": "${textColor}",
                             "wrap": true
                         },
                         {
@@ -22,6 +23,7 @@
                             "text": "${planName}",
                             "size": "small",
                             "weight": "lighter",
+                            "color": "${textColor}",
                             "isSubtle": true,
                             "spacing": "none",
                             "wrap": true
@@ -50,6 +52,7 @@
             "type": "TextBlock",
             "text": "${usedText}",
             "size": "default",
+            "color": "${textColor}",
             "spacing": "medium",
             "wrap": true
         },
@@ -63,29 +66,10 @@
                     "items": [
                         {
                             "type": "ColumnSet",
-                            "$when": "${barStyle == 'accent'}",
                             "spacing": "none",
                             "columns": [
-                                { "type": "Column", "width": "${percentValueClamped}", "items": [], "minHeight": "8px", "style": "accent" },
-                                { "type": "Column", "width": "${percentRemaining}", "items": [], "minHeight": "8px", "style": "emphasis" }
-                            ]
-                        },
-                        {
-                            "type": "ColumnSet",
-                            "$when": "${barStyle == 'warning'}",
-                            "spacing": "none",
-                            "columns": [
-                                { "type": "Column", "width": "${percentValueClamped}", "items": [], "minHeight": "8px", "style": "warning" },
-                                { "type": "Column", "width": "${percentRemaining}", "items": [], "minHeight": "8px", "style": "emphasis" }
-                            ]
-                        },
-                        {
-                            "type": "ColumnSet",
-                            "$when": "${barStyle == 'attention'}",
-                            "spacing": "none",
-                            "columns": [
-                                { "type": "Column", "width": "${percentValueClamped}", "items": [], "minHeight": "8px", "style": "attention" },
-                                { "type": "Column", "width": "${percentRemaining}", "items": [], "minHeight": "8px", "style": "emphasis" }
+                                { "type": "Column", "width": "${percentValueClamped}", "items": [], "minHeight": "8px", "backgroundImage": { "url": "${barFill}", "fillMode": "repeat" } },
+                                { "type": "Column", "width": "${percentRemaining}", "items": [], "minHeight": "8px", "backgroundImage": { "url": "${barTrack}", "fillMode": "repeat" } }
                             ]
                         }
                     ],
@@ -112,6 +96,7 @@
             "text": "${resetTime}",
             "size": "small",
             "weight": "lighter",
+            "color": "${textColor}",
             "isSubtle": true,
             "spacing": "medium"
         },
@@ -121,6 +106,7 @@
             "$when": "${connection != ''}",
             "size": "small",
             "weight": "lighter",
+            "color": "${textColor}",
             "isSubtle": true,
             "spacing": "none"
         },
@@ -129,7 +115,7 @@
             "text": "${statusMessage}",
             "$when": "${statusMessage != ''}",
             "size": "small",
-            "color": "warning",
+            "color": "${messageColor}",
             "wrap": true,
             "spacing": "small"
         },
@@ -141,5 +127,9 @@
                 { "type": "Action.Execute", "verb": "reconnect", "title": "Reconnect" }
             ]
         }
-    ]
+    ],
+    "backgroundImage": {
+        "url": "${background}",
+        "fillMode": "repeatVertically"
+    }
 }

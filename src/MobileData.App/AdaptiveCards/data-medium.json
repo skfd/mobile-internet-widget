@@ -15,6 +15,7 @@
                             "text": "${providerName} Data",
                             "weight": "bolder",
                             "size": "medium",
+                            "color": "${textColor}",
                             "wrap": true
                         }
                     ],
@@ -41,6 +42,7 @@
             "type": "TextBlock",
             "text": "${usedText}",
             "size": "small",
+            "color": "${textColor}",
             "spacing": "small",
             "wrap": true
         },
@@ -49,6 +51,7 @@
             "text": "${resetTime}",
             "size": "small",
             "weight": "lighter",
+            "color": "${textColor}",
             "isSubtle": true,
             "spacing": "none"
         },
@@ -58,6 +61,7 @@
             "$when": "${connection != ''}",
             "size": "small",
             "weight": "lighter",
+            "color": "${textColor}",
             "isSubtle": true,
             "spacing": "none"
         },
@@ -71,29 +75,10 @@
                     "items": [
                         {
                             "type": "ColumnSet",
-                            "$when": "${barStyle == 'accent'}",
                             "spacing": "none",
                             "columns": [
-                                { "type": "Column", "width": "${percentValueClamped}", "items": [], "minHeight": "4px", "style": "accent" },
-                                { "type": "Column", "width": "${percentRemaining}", "items": [], "minHeight": "4px", "style": "emphasis" }
-                            ]
-                        },
-                        {
-                            "type": "ColumnSet",
-                            "$when": "${barStyle == 'warning'}",
-                            "spacing": "none",
-                            "columns": [
-                                { "type": "Column", "width": "${percentValueClamped}", "items": [], "minHeight": "4px", "style": "warning" },
-                                { "type": "Column", "width": "${percentRemaining}", "items": [], "minHeight": "4px", "style": "emphasis" }
-                            ]
-                        },
-                        {
-                            "type": "ColumnSet",
-                            "$when": "${barStyle == 'attention'}",
-                            "spacing": "none",
-                            "columns": [
-                                { "type": "Column", "width": "${percentValueClamped}", "items": [], "minHeight": "4px", "style": "attention" },
-                                { "type": "Column", "width": "${percentRemaining}", "items": [], "minHeight": "4px", "style": "emphasis" }
+                                { "type": "Column", "width": "${percentValueClamped}", "items": [], "minHeight": "4px", "backgroundImage": { "url": "${barFill}", "fillMode": "repeat" } },
+                                { "type": "Column", "width": "${percentRemaining}", "items": [], "minHeight": "4px", "backgroundImage": { "url": "${barTrack}", "fillMode": "repeat" } }
                             ]
                         }
                     ],
@@ -120,7 +105,7 @@
             "text": "${statusMessage}",
             "$when": "${statusMessage != ''}",
             "size": "small",
-            "color": "warning",
+            "color": "${messageColor}",
             "wrap": true,
             "spacing": "small"
         },
@@ -132,5 +117,9 @@
                 { "type": "Action.Execute", "verb": "reconnect", "title": "Reconnect" }
             ]
         }
-    ]
+    ],
+    "backgroundImage": {
+        "url": "${background}",
+        "fillMode": "repeatVertically"
+    }
 }
