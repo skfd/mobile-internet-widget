@@ -5,6 +5,9 @@ left on your Canadian carrier plan — at a glance, no app or login each time.
 
 Supported carriers: **Rogers** and **Fido** (more can be added).
 
+![The Fido widget in the Windows Widgets Board, showing GB remaining, the billing
+cycle reset date, tethering status, and a usage bar](docs/fido-widget.png)
+
 ## How it works
 
 A Windows widget runs headless and can't drive a browser, and the carriers have
@@ -75,9 +78,25 @@ Want to see the widget before running the collector? Write sample data:
 ## Tethering detection
 
 The widget shows whether you're currently tethered and to which network. Windows
-doesn't automatically treat a phone hotspot as mobile, so mark your hotspot as a
-**metered connection** (Windows Settings → Network → Wi-Fi → your hotspot →
-*Metered connection: On*). The widget then reports "Tethered via …".
+doesn't automatically treat a phone hotspot as mobile, so tell it which networks
+are hotspots — either way works:
+
+- Mark your hotspot a **metered connection** (Windows Settings → Network → Wi-Fi →
+  your hotspot → *Metered connection: On*). This also stops Windows Update and
+  OneDrive from eating your data.
+- Or list the hotspot's SSID in `%USERPROFILE%\.mobile-widget\networks.json`, which
+  survives forgetting and re-adding the network:
+
+  ```json
+  { "Jane’s iPhone": "fido" }
+  ```
+
+  Match the SSID exactly — phones often use a typographic apostrophe (`’`, U+2019),
+  which is not the same character as `'`.
+
+The widget then reports "Tethered via …". It can't tell *which* carrier you're
+tethered to: Fido runs on Rogers' network and IP space, so the two are
+indistinguishable from the PC. Add both widgets and read whichever you need.
 
 ## Status
 
