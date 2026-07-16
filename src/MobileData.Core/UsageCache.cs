@@ -16,6 +16,15 @@ public sealed class UsageCacheRecord
     [JsonPropertyName("usedGb")] public double UsedGb { get; set; }
     [JsonPropertyName("cycleResetsAt")] public DateTimeOffset? CycleResetsAt { get; set; }
     [JsonPropertyName("fetchedAt")] public DateTimeOffset FetchedAt { get; set; }
+
+    /// <summary>When the collector last <em>attempted</em> a scrape, whether it
+    /// succeeded or failed. Lets the widget tell "the collector ran and failed"
+    /// (session likely expired) apart from "we simply haven't scraped in a while"
+    /// (laptop asleep/offline).</summary>
+    [JsonPropertyName("lastAttemptAt")] public DateTimeOffset? LastAttemptAt { get; set; }
+
+    /// <summary>Reason the last attempt failed, or null if it succeeded.</summary>
+    [JsonPropertyName("lastError")] public string? LastError { get; set; }
 }
 
 /// <summary>

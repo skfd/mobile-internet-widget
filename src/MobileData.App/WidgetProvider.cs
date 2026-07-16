@@ -294,10 +294,11 @@ public sealed class WidgetProvider : IWidgetProvider, IWidgetProvider2
             }
         }
 
-        // Status / staleness banner (empty when fresh). When present, the data is
-        // stale or missing — offer a Reconnect button to re-establish the session.
+        // Status / staleness banner (empty when fresh). A message can appear
+        // without a Reconnect button — e.g. a neutral "last updated Nh ago" after
+        // the machine was asleep, versus a genuine expired-session prompt.
         var statusMessage = usage.Message ?? "";
-        var needsReconnect = !string.IsNullOrWhiteSpace(statusMessage);
+        var needsReconnect = usage.NeedsReconnect;
 
         // Current connection (tethering) status.
         var net = NetworkDetector.Detect();

@@ -80,6 +80,7 @@ if (attach)
             "--remote-debugging-port=9222 --user-data-dir=\"$env:USERPROFILE\\.mobile-widget\\chrome-attach\"");
         Console.Error.WriteLine($"then sign into {config.DisplayName}, and re-run with --attach.");
         Console.Error.WriteLine($"(details: {ex.Message})");
+        RecordFailedAttempt(providerId, "debug Chrome not reachable on port 9222");
         return 4;
     }
     var context = attached.Contexts.FirstOrDefault() ?? await attached.NewContextAsync();
@@ -137,11 +138,13 @@ if (!loggedIn)
                 $"Not signed in. The {config.DisplayName} session in the debug Chrome (port 9222) " +
                 "has expired — sign in once in that window; hourly scrapes resume automatically.");
             if (attachPage is not null) { try { await attachPage.CloseAsync(); } catch { } }
+            RecordFailedAttempt(providerId, "session expired — not signed in");
             return 3;
         }
         if (headless)
         {
             Console.Error.WriteLine("Not signed in and could not auto-login (a visible run / 2FA may be needed).");
+            RecordFailedAttempt(providerId, "not signed in (headless)");
             return 3;
         }
         Console.WriteLine();
@@ -188,6 +191,7 @@ if (parsed is null)
     Console.WriteLine("Could not find data-usage numbers on the page.");
     Console.WriteLine($"Page text was saved to:\n  {dumpPath}");
     Console.WriteLine("Share that file (or the exact wording of the usage line) to tune the patterns.");
+    RecordFailedAttempt(providerId, "could not find usage numbers on page");
     return 2;
 }
 
@@ -199,7 +203,8 @@ var record = new UsageCacheRecord
     TotalGb = parsed.TotalGb,
     UsedGb = parsed.UsedGb,
     CycleResetsAt = parsed.CycleResetsAt,
-    FetchedAt = DateTimeOffset.Now
+    FetchedAt = DateTimeOffset.Now,
+    LastAttemptAt = DateTimeOffset.Now
 };
 UsageCache.Write(record);
 
@@ -209,6 +214,17 @@ Console.WriteLine(parsed.IsUnlimited
     ? $"  {parsed.UsedGb:F2} GB used (unlimited plan)"
     : $"  {parsed.UsedGb:F2} GB used of {parsed.TotalGb:F2} GB");
 return 0;
+
+// Record a failed scrape attempt without discarding the last good numbers, so
+// the widget can tell an actively-failing collector (expired session) apart from
+// a machine that simply hasn't scraped recently (asleep/offline).
+static void RecordFailedAttempt(string provider, string error)
+{
+    var rec = UsageCache.TryRead(provider) ?? new UsageCacheRecord { Provider = provider };
+    rec.LastAttemptAt = DateTimeOffset.Now;
+    rec.LastError = error;
+    UsageCache.Write(rec);
+}
 
 // ---------------------------------------------------------------------------
 

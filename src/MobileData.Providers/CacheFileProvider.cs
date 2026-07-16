@@ -12,6 +12,12 @@ public abstract class CacheFileProvider : IDataProvider, IDisposable
     /// so an expired collector session surfaces the Reconnect prompt quickly.</summary>
     private static readonly TimeSpan StaleAfter = TimeSpan.FromHours(2);
 
+    /// <summary>A failed scrape attempt within this window counts as "the
+    /// collector is actively failing" (session expired) rather than "the machine
+    /// was asleep." The collector runs every 20 min, so this spans one missed
+    /// cycle without treating a lidded laptop's old attempt as a live failure.</summary>
+    private static readonly TimeSpan RecentAttemptWindow = TimeSpan.FromMinutes(45);
+
     private readonly FileSystemWatcher? _watcher;
 
     protected CacheFileProvider()
@@ -58,16 +64,35 @@ public abstract class CacheFileProvider : IDataProvider, IDisposable
                 ProviderId, DisplayName, IsUnlimited: false,
                 TotalGb: null, UsedGb: 0, CycleResetsAt: null,
                 FetchedAt: DateTimeOffset.MinValue,
-                Message: "No data yet — run the collector."));
+                Message: "No data yet — run the collector.",
+                NeedsReconnect: true));
         }
 
         var age = DateTimeOffset.Now - record.FetchedAt;
         string? message = null;
+        var needsReconnect = false;
         if (age > StaleAfter)
         {
             var days = (int)age.TotalDays;
             var ageText = days > 0 ? $"{days}d {age.Hours}h" : $"{age.Hours}h";
-            message = $"Data is {ageText} old. Tap Reconnect to sign in again.";
+
+            // Only prompt a sign-in when the collector actually ran recently and
+            // failed (session likely expired). If it simply hasn't run — laptop
+            // asleep or offline — show a neutral timestamp: the scheduled scrape
+            // will catch up on its own, so don't cry "sign in again."
+            var recentlyFailed = record.LastError is not null
+                && record.LastAttemptAt is { } attempt
+                && DateTimeOffset.Now - attempt < RecentAttemptWindow;
+
+            if (recentlyFailed)
+            {
+                message = $"Couldn't refresh {DisplayName} data ({ageText} old). Tap Reconnect to sign in again.";
+                needsReconnect = true;
+            }
+            else
+            {
+                message = $"Last updated {ageText} ago.";
+            }
         }
 
         return Task.FromResult(new DataUsageSnapshot(
@@ -78,7 +103,8 @@ public abstract class CacheFileProvider : IDataProvider, IDisposable
             UsedGb: record.UsedGb,
             CycleResetsAt: record.CycleResetsAt,
             FetchedAt: record.FetchedAt,
-            Message: message));
+            Message: message,
+            NeedsReconnect: needsReconnect));
     }
 
     public void Dispose()
