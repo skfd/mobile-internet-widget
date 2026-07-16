@@ -68,21 +68,51 @@ public sealed class WidgetProvider : IWidgetProvider, IWidgetProvider2
     {
         try
         {
+            var definitionId = _activeWidgets.TryGetValue(actionInvokedArgs.WidgetContext.Id, out var state)
+                ? state.DefinitionId
+                : actionInvokedArgs.WidgetContext.DefinitionId;
+
+            if (string.Equals(actionInvokedArgs.Verb, "refresh", StringComparison.OrdinalIgnoreCase))
+            {
+                // Kick the collector's scheduled task instead of waiting for its
+                // next interval. The cache-file watcher refreshes the card once
+                // the scrape lands.
+                StartCollectorTask(definitionId);
+                return;
+            }
+
             if (!string.Equals(actionInvokedArgs.Verb, "reconnect", StringComparison.OrdinalIgnoreCase))
                 return;
 
             // The carrier session behind the collector expired. Open the login
             // page in the dedicated "attach" Chrome profile so the user signs in
             // there; the next collector run reuses that session to refresh.
-            var definitionId = _activeWidgets.TryGetValue(actionInvokedArgs.WidgetContext.Id, out var state)
-                ? state.DefinitionId
-                : actionInvokedArgs.WidgetContext.DefinitionId;
             LaunchLogin(LoginUrlFor(definitionId));
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"OnActionInvoked failed: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Run the collector's scheduled task now (task name matches
+    /// install-collector-task.ps1). Fire-and-forget; if the task isn't
+    /// installed schtasks exits non-zero and nothing happens.
+    /// </summary>
+    private static void StartCollectorTask(string definitionId)
+    {
+        var provider = definitionId == RogersWidgetId ? "rogers" : "fido";
+        var psi = new ProcessStartInfo
+        {
+            FileName = "schtasks.exe",
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+        psi.ArgumentList.Add("/run");
+        psi.ArgumentList.Add("/tn");
+        psi.ArgumentList.Add($"MobileDataWidget-{provider}-Collector");
+        Process.Start(psi);
     }
 
     private static string LoginUrlFor(string definitionId) => definitionId switch

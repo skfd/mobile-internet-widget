@@ -97,6 +97,23 @@
                         }
                     ],
                     "verticalContentAlignment": "center"
+                },
+                {
+                    "type": "Column",
+                    "width": "auto",
+                    "spacing": "small",
+                    "selectAction": { "type": "Action.Execute", "verb": "refresh", "tooltip": "Refresh now" },
+                    "items": [
+                        {
+                            "type": "TextBlock",
+                            "text": "⟳",
+                            "size": "small",
+                            "weight": "lighter",
+                            "color": "${textColor}",
+                            "isSubtle": true
+                        }
+                    ],
+                    "verticalContentAlignment": "center"
                 }
             ]
         },
