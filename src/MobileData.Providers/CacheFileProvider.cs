@@ -69,16 +69,21 @@ public abstract class CacheFileProvider : IDataProvider, IDisposable
         }
 
         var age = DateTimeOffset.Now - record.FetchedAt;
-        string? message = null;
+        var days = (int)age.TotalDays;
+        var ageText = days > 0 ? $"{days}d {age.Hours}h"
+            : age.Hours > 0 ? $"{age.Hours}h"
+            : $"{Math.Max(1, age.Minutes)}m";
+
+        // The timestamp always shows; it renders muted while fresh and switches
+        // to normal emphasis once the cache goes stale.
+        var message = $"Last updated {ageText} ago.";
+        var messageIsSubtle = age <= StaleAfter;
         var needsReconnect = false;
         if (age > StaleAfter)
         {
-            var days = (int)age.TotalDays;
-            var ageText = days > 0 ? $"{days}d {age.Hours}h" : $"{age.Hours}h";
-
             // Only prompt a sign-in when the collector actually ran recently and
             // failed (session likely expired). If it simply hasn't run — laptop
-            // asleep or offline — show a neutral timestamp: the scheduled scrape
+            // asleep or offline — keep the neutral timestamp: the scheduled scrape
             // will catch up on its own, so don't cry "sign in again."
             var recentlyFailed = record.LastError is not null
                 && record.LastAttemptAt is { } attempt
@@ -88,10 +93,6 @@ public abstract class CacheFileProvider : IDataProvider, IDisposable
             {
                 message = $"Couldn't refresh {DisplayName} data ({ageText} old). Tap Reconnect to sign in again.";
                 needsReconnect = true;
-            }
-            else
-            {
-                message = $"Last updated {ageText} ago.";
             }
         }
 
@@ -104,7 +105,8 @@ public abstract class CacheFileProvider : IDataProvider, IDisposable
             CycleResetsAt: record.CycleResetsAt,
             FetchedAt: record.FetchedAt,
             Message: message,
-            NeedsReconnect: needsReconnect));
+            NeedsReconnect: needsReconnect,
+            MessageIsSubtle: messageIsSubtle));
     }
 
     public void Dispose()

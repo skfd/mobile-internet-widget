@@ -324,10 +324,12 @@ public sealed class WidgetProvider : IWidgetProvider, IWidgetProvider2
             }
         }
 
-        // Status / staleness banner (empty when fresh). A message can appear
-        // without a Reconnect button — e.g. a neutral "last updated Nh ago" after
-        // the machine was asleep, versus a genuine expired-session prompt.
+        // Status / staleness line. Always present once there is data: muted
+        // ("last updated Nm ago") while fresh, normal emphasis when stale, and
+        // a warning-colored prompt when the session genuinely expired.
         var statusMessage = usage.Message ?? "";
+        var messageSubtle = usage.MessageIsSubtle;
+        var messageColor = messageSubtle ? colors.Text : colors.Message;
         var needsReconnect = usage.NeedsReconnect;
 
         // Current connection (tethering) status.
@@ -355,12 +357,13 @@ public sealed class WidgetProvider : IWidgetProvider, IWidgetProvider2
             "percentRemaining": {{percentRemaining}},
             "textColor": "{{colors.Text}}",
             "statusColor": "{{colors.Status}}",
-            "messageColor": "{{colors.Message}}",
+            "messageColor": "{{messageColor}}",
             "barFill": "{{colors.BarFill}}",
             "barTrack": "{{colors.BarTrack}}",
             "background": "{{colors.Background}}",
             "resetTime": "{{Escape(resetText)}}",
             "statusMessage": "{{Escape(statusMessage)}}",
+            "messageSubtle": {{(messageSubtle ? "true" : "false")}},
             "needsReconnect": {{(needsReconnect ? "true" : "false")}},
             "connection": "{{Escape(connectionText)}}",
             "size": "{{size}}"

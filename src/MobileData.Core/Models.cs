@@ -12,7 +12,8 @@ public record DataUsageSnapshot(
     DateTimeOffset? CycleResetsAt,
     DateTimeOffset FetchedAt,
     string? Message,
-    bool NeedsReconnect = false)
+    bool NeedsReconnect = false,
+    bool MessageIsSubtle = false)
 {
     /// <summary>Remaining GB, or null when unlimited / total unknown.</summary>
     public double? RemainingGb =>

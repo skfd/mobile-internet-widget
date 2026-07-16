@@ -123,6 +123,7 @@
             "$when": "${statusMessage != ''}",
             "size": "small",
             "color": "${messageColor}",
+            "isSubtle": "${messageSubtle}",
             "wrap": true,
             "spacing": "small"
         },
