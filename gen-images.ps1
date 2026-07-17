@@ -104,6 +104,6 @@ New-Tile 150 150 "Square150x150Logo.png"
 New-Tile 310 150 "Wide310x150Logo.png"
 New-Icon 96 "IconFido.png"   $fidoOrange "F"
 New-Icon 96 "IconRogers.png" $rogersRed  "R"
-New-Preview "PreviewFido.png"   $fidoOrange "Fido Data"   "38.78 GB left" 0.569
+# PreviewFido.png is a real Win+W screenshot now - do not regenerate it.
 New-Preview "PreviewRogers.png" $rogersRed  "Rogers Data" "No data yet"   0.10
 Write-Host "Done. Images in $dir" -ForegroundColor Cyan

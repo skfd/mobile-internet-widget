@@ -163,6 +163,5 @@ nothing reads it yet, since the card only reports "Tethered via {SSID}".
   auto-launch the debug Chrome would keep it warm across reboots (not yet added).
 - Rogers portal patterns (not started — Fido only for now). The Rogers widget
   ships with placeholder art and shows "No data" until its collector exists.
-- Package previews (`PreviewFido.png` etc.) are generated placeholders; replace
-  `PreviewFido.png` with a real Win+W screenshot when convenient (`gen-images.ps1`
-  makes the placeholders).
+- `PreviewFido.png` is a real Win+W screenshot (`gen-images.ps1` deliberately
+  skips it). `PreviewRogers.png` is still a generated placeholder.
