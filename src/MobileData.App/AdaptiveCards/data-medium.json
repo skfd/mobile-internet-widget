@@ -51,7 +51,7 @@
             "text": "${resetTime}",
             "size": "small",
             "weight": "lighter",
-            "color": "${textColor}",
+            "color": "${mutedColor}",
             "isSubtle": true,
             "spacing": "none"
         },
@@ -61,7 +61,7 @@
             "$when": "${connection != ''}",
             "size": "small",
             "weight": "lighter",
-            "color": "${textColor}",
+            "color": "${mutedColor}",
             "isSubtle": true,
             "spacing": "none"
         },
@@ -109,7 +109,7 @@
                             "text": "⟳",
                             "size": "small",
                             "weight": "lighter",
-                            "color": "${textColor}",
+                            "color": "${mutedColor}",
                             "isSubtle": true
                         }
                     ],

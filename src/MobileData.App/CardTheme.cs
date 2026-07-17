@@ -18,6 +18,7 @@ namespace MobileData.App;
 /// </summary>
 internal readonly record struct CardColors(
     string Text,
+    string Muted,
     string Status,
     string Message,
     string BarFill,
@@ -38,6 +39,10 @@ internal readonly record struct CardColors(
 
         return new CardColors(
             Text: light ? "dark" : "light",
+            // For isSubtle text: the host renders "light"+subtle nearly black,
+            // so dark mode uses "default"+subtle (a readable gray in the dark
+            // host config; only its *non*-subtle #F8F8F8 is a light-mode trap).
+            Muted: light ? "dark" : "default",
             Status: status,
             Message: light ? "dark" : "warning",
             BarFill: SolidPng(BarFillHex(barStyle, light)),

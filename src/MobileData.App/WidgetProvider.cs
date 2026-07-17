@@ -329,7 +329,7 @@ public sealed class WidgetProvider : IWidgetProvider, IWidgetProvider2
         // a warning-colored prompt when the session genuinely expired.
         var statusMessage = usage.Message ?? "";
         var messageSubtle = usage.MessageIsSubtle;
-        var messageColor = messageSubtle ? colors.Text : colors.Message;
+        var messageColor = messageSubtle ? colors.Muted : colors.Message;
         var needsReconnect = usage.NeedsReconnect;
 
         // Current connection (tethering) status.
@@ -356,6 +356,7 @@ public sealed class WidgetProvider : IWidgetProvider, IWidgetProvider2
             "percentValueClamped": {{percentValueClamped}},
             "percentRemaining": {{percentRemaining}},
             "textColor": "{{colors.Text}}",
+            "mutedColor": "{{colors.Muted}}",
             "statusColor": "{{colors.Status}}",
             "messageColor": "{{messageColor}}",
             "barFill": "{{colors.BarFill}}",
