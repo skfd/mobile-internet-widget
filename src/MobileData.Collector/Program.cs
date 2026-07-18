@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using Microsoft.Playwright;
 using MobileData.Collector;
 using MobileData.Core;
+using MobileData.Providers;
 
 // Mobile data usage collector.
 //
@@ -19,6 +20,7 @@ using MobileData.Core;
 //   MobileData.Collector fido --set-login    # store DPAPI-encrypted credentials
 //   MobileData.Collector fido --headless     # run without a visible window (needs a live session)
 //   MobileData.Collector fido --attach        # scrape via your own Chrome (CDP on :9222) to pass login reCAPTCHA
+//   MobileData.Collector fido --force          # scrape even when we don't look tethered (bypass the skip)
 //
 // NOTE: portal URLs and text patterns are tuned for Fido; if extraction fails
 // the page text is dumped to the debug folder so patterns can be adjusted.
@@ -26,7 +28,7 @@ using MobileData.Core;
 var providerId = (args.FirstOrDefault() ?? "").Trim().ToLowerInvariant();
 if (providerId is not ("rogers" or "fido"))
 {
-    Console.Error.WriteLine("Usage: MobileData.Collector <rogers|fido> [--set-login] [--headless] [--attach]");
+    Console.Error.WriteLine("Usage: MobileData.Collector <rogers|fido> [--set-login] [--headless] [--attach] [--force]");
     return 1;
 }
 
@@ -50,7 +52,31 @@ if (args.Contains("--set-login"))
 
 var headless = args.Contains("--headless");
 var attach = args.Contains("--attach");
+var force = args.Contains("--force");
 var creds = CredentialStore.Load(providerId);
+
+// Skip the scrape when we're clearly not on the phone plan — home Wi-Fi,
+// Ethernet, or offline. The carrier's number can't change while we're not
+// tethered, so there's nothing to fetch. We leave the cache untouched (no
+// failed-attempt record) so the widget keeps the last good numbers and simply
+// ages to a neutral "last updated" line rather than a Reconnect nag.
+//   NetworkDetector.IsTethered = cellular OR metered OR a hotspot SSID listed
+//   in networks.json — the only dependable tether signal (see CLAUDE.md). If
+//   your phone's SSID isn't listed and Windows didn't mark it metered, add it
+//   to networks.json, or run with --force to scrape anyway.
+if (!force)
+{
+    var net = NetworkDetector.Detect();
+    if (!net.IsTethered)
+    {
+        var where = net.IsConnected
+            ? $"on '{net.NetworkName}' (not a tethered/metered connection)"
+            : "offline";
+        Console.WriteLine(
+            $"Not tethered — {where}. Skipping {config.DisplayName} scrape (use --force to override).");
+        return 0;
+    }
+}
 
 // Disposing the Playwright driver tears down whatever we started: it closes a
 // browser we launched, and merely disconnects from one we attached to over CDP.

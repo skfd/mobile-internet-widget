@@ -1,7 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <!-- Windows SDK TFM (not plain net8.0-windows) so the collector can call
+         NetworkDetector, which uses Windows.Networking.Connectivity to skip
+         scraping when we're not tethered. -->
+    <TargetFramework>net8.0-windows10.0.22621</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <Platforms>x64</Platforms>
@@ -14,5 +17,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MobileData.Core\MobileData.Core.csproj" />
+    <ProjectReference Include="..\MobileData.Providers\MobileData.Providers.csproj" />
   </ItemGroup>
 </Project>

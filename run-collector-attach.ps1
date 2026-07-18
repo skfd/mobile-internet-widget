@@ -46,7 +46,7 @@ if (-not (Test-DebugPort)) {
     }
 }
 
-$exe = "$PSScriptRoot\src\MobileData.Collector\bin\Release\net8.0-windows\MobileData.Collector.exe"
+$exe = "$PSScriptRoot\src\MobileData.Collector\bin\Release\net8.0-windows10.0.22621\MobileData.Collector.exe"
 if (-not (Test-Path $exe)) {
     Write-Error "Collector exe not found at $exe (build Release first, or run install-collector-task.ps1)."
     exit 1

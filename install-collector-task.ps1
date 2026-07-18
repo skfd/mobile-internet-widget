@@ -45,7 +45,7 @@ if ($Uninstall) {
 $proj = "$PSScriptRoot\src\MobileData.Collector\MobileData.Collector.csproj"
 Write-Host "Building collector (Release)..." -ForegroundColor Yellow
 dotnet build $proj -c Release -v minimal | Out-Null
-$exe = "$PSScriptRoot\src\MobileData.Collector\bin\Release\net8.0-windows\MobileData.Collector.exe"
+$exe = "$PSScriptRoot\src\MobileData.Collector\bin\Release\net8.0-windows10.0.22621\MobileData.Collector.exe"
 if (-not (Test-Path $exe)) { Write-Host "ERROR: collector exe not found at $exe" -ForegroundColor Red; exit 1 }
 
 # Repeating trigger, indefinite, catching up missed runs.

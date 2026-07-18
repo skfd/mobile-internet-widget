@@ -96,6 +96,22 @@ logged-on user (task `MobileDataWidget-<provider>-Collector`). When the session
 lapses the scrape exits non-zero **without** overwriting the cache, leaving the
 last good number; the widget's Reconnect button re-establishes it.
 
+### Skip when not tethered
+
+The carrier number can't change while you're not on the phone plan, so the
+collector **skips the scrape when it doesn't look tethered** (home Wi-Fi,
+Ethernet, or offline). At startup it calls `NetworkDetector.Detect()` and, unless
+`--force` is passed, exits 0 **without touching the cache** when `IsTethered` is
+false — the widget keeps the last good numbers and ages to the neutral "last
+updated" line (no Reconnect nag, since no failed attempt is recorded). This is why
+`MobileData.Collector` targets `net8.0-windows10.0.22621` and references
+`MobileData.Providers` (for `Windows.Networking.Connectivity`).
+
+Caveat: `IsTethered` is best-effort (`cellular || metered || SSID in
+networks.json`). If your phone's hotspot SSID isn't listed and Windows didn't mark
+it metered, a real tether gets skipped — add the SSID to `networks.json` (mind the
+U+2019 apostrophe) or run with `--force`.
+
 Notes for future work:
 - `--attach` waits up to 40s for usage to render (a cold-launched Chrome + the
   carrier SPA is slow); too short a wait looks like "not signed in".
