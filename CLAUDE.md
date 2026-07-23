@@ -94,8 +94,10 @@ Chrome is up (launches it if not), then runs `--attach`. Pass `-Headless` and it
 launches that Chrome with `--headless=new` instead of a minimized window —
 reCAPTCHA only fires at *login* (which still needs a headed window, so Reconnect
 opens one), so an already-signed-in session scrapes fine with no window at all.
-`install-collector-task.ps1` schedules that wrapper **with `-Headless`** every
-**20 min** as the logged-on user (task `MobileDataWidget-<provider>-Collector`).
+`install-collector-task.ps1` schedules that wrapper every **20 min** as the
+logged-on user (task `MobileDataWidget-<provider>-Collector`), via
+`run-hidden.vbs` (wscript window style 0) so the PowerShell console never
+flashes; the launcher forces `-Headless`.
 When the session lapses the scrape exits non-zero **without** overwriting the
 cache, leaving the last good number; the widget's Reconnect button re-establishes
 it (in a headed window).

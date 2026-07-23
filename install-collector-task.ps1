@@ -49,10 +49,11 @@ $exe = "$PSScriptRoot\src\MobileData.Collector\bin\Release\net8.0-windows10.0.22
 if (-not (Test-Path $exe)) { Write-Host "ERROR: collector exe not found at $exe" -ForegroundColor Red; exit 1 }
 
 # Repeating trigger, indefinite, catching up missed runs.
-# Runs the wrapper, which ensures the logged-in debug Chrome is up, then scrapes.
-$wrapper = "$PSScriptRoot\run-collector-attach.ps1"
-$action  = New-ScheduledTaskAction -Execute "powershell.exe" `
-    -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$wrapper`" -Provider $Provider -Headless" `
+# Runs via a hidden VBScript launcher (wscript window style 0) so the wrapper's
+# PowerShell never flashes a console window; the launcher forces -Headless.
+$launcher = "$PSScriptRoot\run-hidden.vbs"
+$action   = New-ScheduledTaskAction -Execute "wscript.exe" `
+    -Argument "`"$launcher`" $Provider" `
     -WorkingDirectory $PSScriptRoot
 $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).Date.AddMinutes(2) `
     -RepetitionInterval (New-TimeSpan -Minutes $IntervalMinutes)
