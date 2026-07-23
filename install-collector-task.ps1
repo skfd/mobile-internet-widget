@@ -52,7 +52,7 @@ if (-not (Test-Path $exe)) { Write-Host "ERROR: collector exe not found at $exe"
 # Runs the wrapper, which ensures the logged-in debug Chrome is up, then scrapes.
 $wrapper = "$PSScriptRoot\run-collector-attach.ps1"
 $action  = New-ScheduledTaskAction -Execute "powershell.exe" `
-    -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$wrapper`" -Provider $Provider" `
+    -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$wrapper`" -Provider $Provider -Headless" `
     -WorkingDirectory $PSScriptRoot
 $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).Date.AddMinutes(2) `
     -RepetitionInterval (New-TimeSpan -Minutes $IntervalMinutes)

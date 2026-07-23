@@ -21,7 +21,12 @@
 
 param(
     [ValidateSet("fido", "rogers")]
-    [string]$Provider = "fido"
+    [string]$Provider = "fido",
+    # EXPERIMENTAL: launch the debug Chrome with --headless=new instead of a
+    # minimized window. reCAPTCHA only fires at login (which still needs a real
+    # headed window), so an already-signed-in session may scrape fine headless.
+    # Under test - session may get flagged; fall back by dropping this switch.
+    [switch]$Headless
 )
 
 $ErrorActionPreference = "Stop"
@@ -34,8 +39,9 @@ function Test-DebugPort { [bool](Get-NetTCPConnection -LocalPort $port -State Li
 
 # Ensure the logged-in debug Chrome is running (it holds the carrier session).
 if (-not (Test-DebugPort)) {
+    $windowArg = if ($Headless) { "--headless=new" } else { "--start-minimized" }
     Start-Process $chrome -ArgumentList `
-        "--remote-debugging-port=$port", "--user-data-dir=$profile", "--start-minimized"
+        "--remote-debugging-port=$port", "--user-data-dir=$profile", $windowArg
     foreach ($i in 1..30) {
         Start-Sleep -Milliseconds 500
         if (Test-DebugPort) { break }

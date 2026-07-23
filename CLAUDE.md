@@ -90,11 +90,15 @@ dotnet run --project src/MobileData.Collector -- fido --attach   # scrape via po
 ```
 
 `run-collector-attach.ps1` is the self-healing runner: it ensures the debug
-Chrome is up (launches it minimized if not), then runs `--attach`.
-`install-collector-task.ps1` schedules that wrapper every **20 min** as the
-logged-on user (task `MobileDataWidget-<provider>-Collector`). When the session
-lapses the scrape exits non-zero **without** overwriting the cache, leaving the
-last good number; the widget's Reconnect button re-establishes it.
+Chrome is up (launches it if not), then runs `--attach`. Pass `-Headless` and it
+launches that Chrome with `--headless=new` instead of a minimized window —
+reCAPTCHA only fires at *login* (which still needs a headed window, so Reconnect
+opens one), so an already-signed-in session scrapes fine with no window at all.
+`install-collector-task.ps1` schedules that wrapper **with `-Headless`** every
+**20 min** as the logged-on user (task `MobileDataWidget-<provider>-Collector`).
+When the session lapses the scrape exits non-zero **without** overwriting the
+cache, leaving the last good number; the widget's Reconnect button re-establishes
+it (in a headed window).
 
 ### Skip when not tethered
 
