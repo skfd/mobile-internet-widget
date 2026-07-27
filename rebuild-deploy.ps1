@@ -45,7 +45,9 @@ if ($oldPkg) {
 }
 
 # Stop widget processes so cached metadata is cleared and files unlock.
-foreach ($procName in @("MobileData.App", "WidgetService", "WidgetBoard")) {
+# The board host is "Widgets" (...\WebExperience\Dashboard\Widgets.exe) — there
+# is no "WidgetBoard" process, so naming it that silently skipped the board.
+foreach ($procName in @("MobileData.App", "WidgetService", "Widgets")) {
     $attempt = 0
     while ($attempt -lt 5) {
         $procs = Get-Process -Name $procName -ErrorAction SilentlyContinue
@@ -77,4 +79,11 @@ Write-Host "Images copied to layout" -ForegroundColor Green
 $layoutManifest = "$PSScriptRoot\packaging\MobileData.Package\bin\x64\Debug\AppxManifest.xml"
 if (-not (Test-Path $layoutManifest)) { Write-Host "ERROR: layout manifest not found" -ForegroundColor Red; exit 1 }
 Add-AppxPackage -Path $layoutManifest -Register
+
+# Drop the board host once more, now that the new package is registered. It reads
+# the "add widget" catalog at startup, so any copy that came back during the build
+# still offers the old entry (or none). Windows relaunches it on the next Win+W.
+Get-Process -Name "Widgets", "WidgetService" -ErrorAction SilentlyContinue |
+    Stop-Process -Force -ErrorAction SilentlyContinue
+
 Write-Host "`nDeploy succeeded!  Press Win+W and add the 'Fido Data' widget." -ForegroundColor Cyan
