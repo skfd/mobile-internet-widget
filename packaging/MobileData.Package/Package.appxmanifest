@@ -8,7 +8,7 @@
          xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
          IgnorableNamespaces="uap uap3 mp rescap com desktop">
 
-  <Identity Name="MobileDataWidget" Publisher="CN=TestCert" Version="1.0.12.0" />
+  <Identity Name="MobileDataWidget" Publisher="CN=TestCert" Version="1.0.13.0" />
 
   <mp:PhoneIdentity PhoneProductId="63025828-B62F-4FE9-AAF5-A83E7162E090" PhonePublisherId="00000000-0000-0000-0000-000000000000" />
 
@@ -48,7 +48,7 @@
 
         <!-- Widget Registration -->
         <uap3:Extension Category="windows.appExtension">
-          <uap3:AppExtension Name="com.microsoft.windows.widgets" DisplayName="Mobile Data Widget v12" Id="WidgetProvider" PublicFolder="Public">
+          <uap3:AppExtension Name="com.microsoft.windows.widgets" DisplayName="Mobile Data Widget v13" Id="WidgetProvider" PublicFolder="Public">
             <uap3:Properties>
               <WidgetProvider>
                 <ProviderIcons>
