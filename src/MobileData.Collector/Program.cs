@@ -52,7 +52,11 @@ if (args.Contains("--set-login"))
 
 var headless = args.Contains("--headless");
 var attach = args.Contains("--attach");
-var force = args.Contains("--force");
+// --force, or a one-shot flag dropped by the widget's Refresh button (which can
+// only start this collector's scheduled task, with no way to pass arguments).
+// `|`, not `||`: consume any pending flag even when --force was passed, so a
+// manual forced run doesn't leave one behind for the next scheduled run.
+var force = args.Contains("--force") | UsageCache.ConsumeForce(providerId);
 var creds = CredentialStore.Load(providerId);
 
 // Skip the scrape when we're clearly not on the phone plan — home Wi-Fi,

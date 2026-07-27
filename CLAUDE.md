@@ -118,6 +118,15 @@ networks.json`). If your phone's hotspot SSID isn't listed and Windows didn't ma
 it metered, a real tether gets skipped — add the SSID to `networks.json` (mind the
 U+2019 apostrophe) or run with `--force`.
 
+The skip applies to the *unattended* runs only. Tapping the card's `⟳` (verb
+`refresh`) is an explicit ask, so it must scrape regardless of connection —
+otherwise the button silently does nothing on home Wi-Fi. `schtasks /run` can't
+pass arguments to the task, so the widget hands the intent over on disk:
+`UsageCache.RequestForce()` drops `{provider}.force` next to the cache, and the
+collector's `UsageCache.ConsumeForce()` takes it at startup as if `--force` were
+passed. It's one-shot — consumed on the next run either way, so a stale flag can
+never force a later scheduled run.
+
 Notes for future work:
 - `--attach` waits up to 40s for usage to render (a cold-launched Chrome + the
   carrier SPA is slow); too short a wait looks like "not signed in".

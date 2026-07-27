@@ -71,4 +71,42 @@ public static class UsageCache
         var json = JsonSerializer.Serialize(record, Options);
         File.WriteAllText(PathFor(record.Provider), json);
     }
+
+    private static string ForceFlagFor(string providerId) =>
+        Path.Combine(Directory, $"{providerId}.force");
+
+    /// <summary>
+    /// Ask the next collector run to scrape even if we don't look tethered.
+    /// The widget's Refresh button can only <em>start</em> the collector's
+    /// scheduled task (schtasks /run takes no arguments), so it leaves this
+    /// one-shot flag on disk to pass the intent along.
+    /// </summary>
+    public static void RequestForce(string providerId)
+    {
+        try
+        {
+            System.IO.Directory.CreateDirectory(Directory);
+            File.WriteAllText(ForceFlagFor(providerId), "");
+        }
+        catch
+        {
+            // Best-effort: without the flag the run just honours the usual skip.
+        }
+    }
+
+    /// <summary>Take a pending force request, if any. True at most once per request.</summary>
+    public static bool ConsumeForce(string providerId)
+    {
+        try
+        {
+            var path = ForceFlagFor(providerId);
+            if (!File.Exists(path)) return false;
+            File.Delete(path);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
 }

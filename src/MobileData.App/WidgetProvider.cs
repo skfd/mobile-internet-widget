@@ -103,6 +103,13 @@ public sealed class WidgetProvider : IWidgetProvider, IWidgetProvider2
     private static void StartCollectorTask(string definitionId)
     {
         var provider = definitionId == RogersWidgetId ? "rogers" : "fido";
+
+        // Tapping Refresh is an explicit ask, so it must beat the collector's
+        // "skip the scrape when we don't look tethered" rule — otherwise the
+        // button silently does nothing on home Wi-Fi. schtasks /run can't pass
+        // arguments, so the intent goes through the cache directory instead.
+        UsageCache.RequestForce(provider);
+
         var psi = new ProcessStartInfo
         {
             FileName = "schtasks.exe",
