@@ -140,6 +140,32 @@ collector's `UsageCache.ConsumeForce()` takes it at startup as if `--force` were
 passed. It's one-shot — consumed on the next run either way, so a stale flag can
 never force a later scheduled run.
 
+### Assumed cycle reset
+
+The skip above makes crossing a billing boundary *blind* the normal case: a few
+days on home Wi-Fi over the reset date and no scrape runs, so the cache is
+stranded on last cycle's depleted number while the card reads a dead
+"Cycle ended". So `CacheFileProvider` projects it: when the cached reading
+predates its own `cycleResetsAt` and that date has passed, it rolls the anchor
+one month forward (`ProjectReset`) and assumes `UsedGb = 0`.
+
+This is a **presentation-layer** inference — the cache keeps only observed facts,
+so the next real scrape corrects the card instantly. Three rules keep it honest:
+
+- **It's labeled.** `CycleProjected` flows to the card, which prefixes the
+  figures with `≈`, shows `Resets ~MMM d` with no countdown (the anchor is only
+  good to a day — Fido gives "N days remaining", not a date), and states
+  `Assumed reset MMM d — unconfirmed for {age}` un-muted.
+- **One cycle only** (`MaxProjectedCycles`). Past that the reading is a month-plus
+  old: it keeps the last observed numbers (understating what's left is the safe
+  direction) and prompts Reconnect instead of inventing a full tank.
+- **The reading must predate the reset.** A scrape on the cycle's last day
+  reports an anchor of midnight *that morning* — already past. Without the
+  `FetchedAt < observed` guard that fresh number would be thrown away.
+
+Note the error flips direction here: a stale reading understates what you have,
+an assumed reset overstates it. That's why the `≈` is not optional.
+
 Notes for future work:
 - `--attach` waits up to 40s for usage to render (a cold-launched Chrome + the
   carrier SPA is slow); too short a wait looks like "not signed in".

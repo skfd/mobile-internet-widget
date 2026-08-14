@@ -3,6 +3,9 @@
 /// <summary>
 /// A single mobile-data usage snapshot for one carrier account/line.
 /// </summary>
+/// <param name="CycleProjected">True when the reading predates the cycle reset,
+/// so the refilled allotment is assumed rather than observed. The card renders
+/// these figures as approximate.</param>
 public record DataUsageSnapshot(
     string ProviderId,
     string PlanName,
@@ -13,7 +16,8 @@ public record DataUsageSnapshot(
     DateTimeOffset FetchedAt,
     string? Message,
     bool NeedsReconnect = false,
-    bool MessageIsSubtle = false)
+    bool MessageIsSubtle = false,
+    bool CycleProjected = false)
 {
     /// <summary>Remaining GB, or null when unlimited / total unknown.</summary>
     public double? RemainingGb =>

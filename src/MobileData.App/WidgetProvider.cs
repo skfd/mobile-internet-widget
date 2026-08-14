@@ -394,6 +394,10 @@ public sealed class WidgetProvider : IWidgetProvider, IWidgetProvider2
 
         var colors = CardColors.For(GetBarStyle(utilPercent, util.HasValue), brandHex);
 
+        // Figures inferred from an assumed cycle reset carry a "≈" so an
+        // assumption never wears the same face as a measurement.
+        var approx = usage.CycleProjected ? "≈" : "";
+
         // Headline "remaining" figure.
         string remainingText;
         if (!hasData)
@@ -401,22 +405,22 @@ public sealed class WidgetProvider : IWidgetProvider, IWidgetProvider2
         else if (usage.IsUnlimited)
             remainingText = "Unlimited";
         else if (usage.RemainingGb is { } rem)
-            remainingText = $"{FormatGb(rem)} left";
+            remainingText = $"{approx}{FormatGb(rem)} left";
         else
-            remainingText = $"{FormatGb(usage.UsedGb)} used";
+            remainingText = $"{approx}{FormatGb(usage.UsedGb)} used";
 
         // Secondary "used of total" line.
         string usedText;
         if (!hasData)
             usedText = usage.Message ?? "Run the collector to sign in.";
         else if (usage.IsUnlimited)
-            usedText = $"{FormatGb(usage.UsedGb)} used";
+            usedText = $"{approx}{FormatGb(usage.UsedGb)} used";
         else if (usage.TotalGb is { } total)
-            usedText = $"{FormatGb(usage.UsedGb)} of {FormatGb(total)} used";
+            usedText = $"{approx}{FormatGb(usage.UsedGb)} of {FormatGb(total)} used";
         else
-            usedText = $"{FormatGb(usage.UsedGb)} used";
+            usedText = $"{approx}{FormatGb(usage.UsedGb)} used";
 
-        var percentText = util.HasValue ? $"{utilPercent:F0}%" : "—%";
+        var percentText = util.HasValue ? $"{approx}{utilPercent:F0}%" : "—%";
         var percentValueClamped = util.HasValue ? Math.Max(1, Math.Min(100, (int)Math.Round(utilPercent))) : 0;
         var percentRemaining = Math.Max(1, 100 - percentValueClamped);
 
@@ -427,6 +431,11 @@ public sealed class WidgetProvider : IWidgetProvider, IWidgetProvider2
             var remaining = reset - DateTimeOffset.Now;
             if (remaining.TotalSeconds <= 0)
                 resetText = "Cycle ended";
+            else if (usage.CycleProjected)
+            {
+                // A projected anchor is only good to a day or so, so no countdown.
+                resetText = $"Resets ~{reset.LocalDateTime:MMM d}";
+            }
             else
             {
                 var days = (int)remaining.TotalDays;
