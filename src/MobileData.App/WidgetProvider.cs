@@ -87,7 +87,19 @@ public sealed class WidgetProvider : IWidgetProvider, IWidgetProvider2
             // The carrier session behind the collector expired. Open the login
             // page in the dedicated "attach" Chrome profile so the user signs in
             // there; the next collector run reuses that session to refresh.
-            LaunchLogin(LoginUrlFor(definitionId));
+            // Off the COM call: evicting a headless Chrome takes a few seconds.
+            var url = LoginUrlFor(definitionId);
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                try
+                {
+                    LaunchLogin(url);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"LaunchLogin failed: {ex.Message}");
+                }
+            });
         }
         catch (Exception ex)
         {
@@ -128,9 +140,18 @@ public sealed class WidgetProvider : IWidgetProvider, IWidgetProvider2
         _ => "https://www.fido.ca/self-serve/wireless"
     };
 
+    private const string DebugEndpoint = "http://127.0.0.1:9222";
+
     /// <summary>
     /// Launch the carrier login in the collector's attach Chrome profile (port
-    /// 9222). If that Chrome is already running, this just opens a tab in it.
+    /// 9222). If that Chrome is already running, this just opens a window in it.
+    ///
+    /// The catch: the scheduled collector launches that Chrome with
+    /// `--headless=new`. Chrome's per-profile singleton then swallows this
+    /// launch and hands the URL to the *headless* instance, so the login tab
+    /// opens invisibly and the user sees nothing happen. So evict a headless
+    /// owner first (Browser.close over CDP) and let this launch own the profile
+    /// headed. The collector reattaches to it on its next run.
     /// </summary>
     private static void LaunchLogin(string url)
     {
@@ -141,6 +162,9 @@ public sealed class WidgetProvider : IWidgetProvider, IWidgetProvider2
             return;
         }
 
+        if (TryGetHeadlessDebuggerUrl() is string wsUrl)
+            CloseBrowser(wsUrl);
+
         var profileDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
             ".mobile-widget", "chrome-attach");
@@ -148,8 +172,90 @@ public sealed class WidgetProvider : IWidgetProvider, IWidgetProvider2
         var psi = new ProcessStartInfo { FileName = chrome, UseShellExecute = false };
         psi.ArgumentList.Add("--remote-debugging-port=9222");
         psi.ArgumentList.Add($"--user-data-dir={profileDir}");
+        // Forces a window even when an existing (minimized) instance takes over
+        // the launch, so the login is never buried in a background tab.
+        psi.ArgumentList.Add("--new-window");
         psi.ArgumentList.Add(url);
         Process.Start(psi);
+    }
+
+    /// <summary>
+    /// Browser-level CDP socket of the debug Chrome, but only when it is
+    /// headless; null when nothing is listening or the instance is headed
+    /// (which can show the login itself). Note `--headless=new` still reports
+    /// "Chrome/..." in the Browser field — only the UA says HeadlessChrome.
+    /// </summary>
+    private static string? TryGetHeadlessDebuggerUrl()
+    {
+        try
+        {
+            using var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(3) };
+            var json = http.GetStringAsync($"{DebugEndpoint}/json/version").GetAwaiter().GetResult();
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            var root = doc.RootElement;
+
+            var headless =
+                (root.TryGetProperty("User-Agent", out var ua) &&
+                 (ua.GetString() ?? "").Contains("Headless", StringComparison.OrdinalIgnoreCase)) ||
+                (root.TryGetProperty("Browser", out var br) &&
+                 (br.GetString() ?? "").Contains("Headless", StringComparison.OrdinalIgnoreCase));
+
+            if (!headless)
+                return null;
+
+            return root.TryGetProperty("webSocketDebuggerUrl", out var ws) ? ws.GetString() : null;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"TryGetHeadlessDebuggerUrl: {ex.Message}");
+            return null;
+        }
+    }
+
+    /// <summary>Shut the debug Chrome down and wait for it to let go of the
+    /// profile, so the next launch owns it instead of being forwarded to it.</summary>
+    private static void CloseBrowser(string webSocketDebuggerUrl)
+    {
+        try
+        {
+            using var socket = new System.Net.WebSockets.ClientWebSocket();
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            socket.ConnectAsync(new Uri(webSocketDebuggerUrl), cts.Token).GetAwaiter().GetResult();
+
+            var message = System.Text.Encoding.UTF8.GetBytes("{\"id\":1,\"method\":\"Browser.close\"}");
+            socket.SendAsync(
+                new ArraySegment<byte>(message),
+                System.Net.WebSockets.WebSocketMessageType.Text,
+                endOfMessage: true,
+                cts.Token).GetAwaiter().GetResult();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"CloseBrowser: {ex.Message}");
+        }
+
+        // Chrome releases the singleton a moment after the socket drops.
+        for (var i = 0; i < 40; i++)
+        {
+            if (!IsDebugPortAnswering())
+                return;
+            Thread.Sleep(250);
+        }
+        System.Diagnostics.Debug.WriteLine("CloseBrowser: headless Chrome still listening on 9222.");
+    }
+
+    private static bool IsDebugPortAnswering()
+    {
+        try
+        {
+            using var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(2) };
+            http.GetStringAsync($"{DebugEndpoint}/json/version").GetAwaiter().GetResult();
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private static string? FindChrome()

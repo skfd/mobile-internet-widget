@@ -102,6 +102,19 @@ When the session lapses the scrape exits non-zero **without** overwriting the
 cache, leaving the last good number; the widget's Reconnect button re-establishes
 it (in a headed window).
 
+**Reconnect vs. the headless instance.** Chrome's singleton is per
+`--user-data-dir`, so once the scheduled task owns `chrome-attach` with
+`--headless=new`, a plain `chrome.exe --user-data-dir=... <login-url>` is *not* a
+new browser — the launch is forwarded to the headless instance, which opens the
+login in an invisible tab and exits. That looked exactly like "Reconnect does
+nothing". So `WidgetProvider.LaunchLogin` first probes
+`http://127.0.0.1:9222/json/version` and, if the owner is headless, sends
+`Browser.close` over the browser-level CDP socket and waits for the port to go
+quiet (~0.5s) before launching headed with `--new-window`. Detection must read
+the **User-Agent** (`HeadlessChrome/...`): `--headless=new` still reports plain
+`"Browser": "Chrome/151..."`. The relaunched headed Chrome keeps port 9222 open,
+so the next scheduled scrape just attaches to it.
+
 ### Skip when not tethered
 
 The carrier number can't change while you're not on the phone plan, so the
