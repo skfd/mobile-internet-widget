@@ -1,5 +1,6 @@
 # Claude Code project data
-.claude/
+.claude/*
+!.claude/skills/
 
 # Credential and secret files
 **/auth.json
