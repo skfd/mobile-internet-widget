@@ -140,6 +140,16 @@ collector's `UsageCache.ConsumeForce()` takes it at startup as if `--force` were
 passed. It's one-shot — consumed on the next run either way, so a stale flag can
 never force a later scheduled run.
 
+When the card is already showing Reconnect, a scrape would only fail again, so
+`⟳` opens the login window instead (same path as Reconnect) — unless the debug
+Chrome is already **headed**, i.e. the login is or just was on screen. Then it
+scrapes, so `⟳` after signing in picks the session up rather than reopening the
+login forever, and the collector's tab never pops over a half-typed login.
+
+The wrapper detects the debug Chrome by probing `/json/version` over HTTP, not
+`Get-NetTCPConnection`: after a Chrome self-update the socket showed a blank
+State (not `Listen`) while CDP worked, and every run bailed before scraping.
+
 ### Assumed cycle reset
 
 The skip above makes crossing a billing boundary *blind* the normal case: a few
