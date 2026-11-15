@@ -74,10 +74,18 @@ public sealed class WidgetProvider : IWidgetProvider, IWidgetProvider2
 
             if (string.Equals(actionInvokedArgs.Verb, "refresh", StringComparison.OrdinalIgnoreCase))
             {
-                // Kick the collector's scheduled task instead of waiting for its
-                // next interval. The cache-file watcher refreshes the card once
-                // the scrape lands.
-                StartCollectorTask(definitionId);
+                _providers.TryGetValue(definitionId, out var provider);
+                System.Threading.Tasks.Task.Run(() =>
+                {
+                    try
+                    {
+                        Refresh(definitionId, provider);
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Refresh failed: {ex.Message}");
+                    }
+                });
                 return;
             }
 
@@ -105,6 +113,33 @@ public sealed class WidgetProvider : IWidgetProvider, IWidgetProvider2
         {
             System.Diagnostics.Debug.WriteLine($"OnActionInvoked failed: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// ⟳ on the card. Normally: kick the collector's scheduled task instead of
+    /// waiting for its next interval; the cache-file watcher refreshes the card
+    /// once the scrape lands.
+    ///
+    /// But when the card is already asking for Reconnect, a scrape from the
+    /// headless Chrome can only fail again, and ⟳ would look dead. So open the
+    /// login window instead — unless the debug Chrome is already headed, which
+    /// means the login is (or was just) on screen: then scrape, so tapping ⟳
+    /// after signing in picks the new session up instead of reopening the login
+    /// forever. Scraping only in that case also keeps the collector's throwaway
+    /// tab from popping over a login the user is still typing into.
+    /// </summary>
+    private static void Refresh(string definitionId, IDataProvider? provider)
+    {
+        var needsReconnect = provider?.FetchUsageAsync(CancellationToken.None)
+            .GetAwaiter().GetResult().NeedsReconnect ?? false;
+
+        if (needsReconnect && ProbeDebugChrome() is not { Headless: false })
+        {
+            LaunchLogin(LoginUrlFor(definitionId));
+            return;
+        }
+
+        StartCollectorTask(definitionId);
     }
 
     /// <summary>
@@ -162,7 +197,7 @@ public sealed class WidgetProvider : IWidgetProvider, IWidgetProvider2
             return;
         }
 
-        if (TryGetHeadlessDebuggerUrl() is string wsUrl)
+        if (ProbeDebugChrome() is { Headless: true, WebSocketDebuggerUrl: string wsUrl })
             CloseBrowser(wsUrl);
 
         var profileDir = Path.Combine(
@@ -179,13 +214,14 @@ public sealed class WidgetProvider : IWidgetProvider, IWidgetProvider2
         Process.Start(psi);
     }
 
+    private sealed record DebugChrome(bool Headless, string? WebSocketDebuggerUrl);
+
     /// <summary>
-    /// Browser-level CDP socket of the debug Chrome, but only when it is
-    /// headless; null when nothing is listening or the instance is headed
-    /// (which can show the login itself). Note `--headless=new` still reports
+    /// What owns port 9222: headless or headed, plus its browser-level CDP
+    /// socket; null when nothing answers. Note `--headless=new` still reports
     /// "Chrome/..." in the Browser field — only the UA says HeadlessChrome.
     /// </summary>
-    private static string? TryGetHeadlessDebuggerUrl()
+    private static DebugChrome? ProbeDebugChrome()
     {
         try
         {
@@ -200,14 +236,12 @@ public sealed class WidgetProvider : IWidgetProvider, IWidgetProvider2
                 (root.TryGetProperty("Browser", out var br) &&
                  (br.GetString() ?? "").Contains("Headless", StringComparison.OrdinalIgnoreCase));
 
-            if (!headless)
-                return null;
-
-            return root.TryGetProperty("webSocketDebuggerUrl", out var ws) ? ws.GetString() : null;
+            return new DebugChrome(headless,
+                root.TryGetProperty("webSocketDebuggerUrl", out var ws) ? ws.GetString() : null);
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"TryGetHeadlessDebuggerUrl: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"ProbeDebugChrome: {ex.Message}");
             return null;
         }
     }

@@ -35,7 +35,17 @@ $chrome  = "C:\Program Files\Google\Chrome\Application\chrome.exe"
 $profile = "$env:USERPROFILE\.mobile-widget\chrome-attach"
 $port    = 9222
 
-function Test-DebugPort { [bool](Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue) }
+# Ask Chrome itself rather than the TCP table: after Chrome restarted itself
+# for an update, Get-NetTCPConnection reported its 9222 socket with a blank
+# State (not Listen) while CDP worked fine, so every run "relaunched" Chrome
+# (forwarded to the running one), waited 15s, and exited without scraping.
+# 127.0.0.1, not localhost: the DevTools endpoint binds IPv4 only.
+function Test-DebugPort {
+    try {
+        Invoke-RestMethod "http://127.0.0.1:$port/json/version" -TimeoutSec 2 | Out-Null
+        $true
+    } catch { $false }
+}
 
 # Ensure the logged-in debug Chrome is running (it holds the carrier session).
 if (-not (Test-DebugPort)) {
